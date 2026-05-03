@@ -8,12 +8,18 @@ venv/
 .venv/
 env/
 
-# Build / distribution
+# PyInstaller
 build/
 dist/
-
-# PyInstaller
+*.toc
+*.pyz
+*.pkg
+*.manifest
 *.spec
+base_library.zip
+warn-*.txt
+xref-*.html
+localpycs/
 
 # Logs
 *.log
