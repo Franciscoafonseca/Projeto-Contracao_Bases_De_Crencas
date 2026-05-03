@@ -1,12 +1,9 @@
 # logica/__init__.py
-#
-# Facilita imports noutros sítios.
 
 from .belief_base import BeliefBase
-from .contraction import partial_meet_contraction, kernel_contraction
 
-# ferramentas de cálculo proposicional
 from .cp_logic import (
+    ParseError,
     Formula,
     Var,
     Neg,
@@ -14,10 +11,19 @@ from .cp_logic import (
     Or,
     Imp,
     Iff,
-    ParseError,
     parse_formula,
     is_cp_formula,
     is_tautology,
-    entails,
+    is_contradiction,
     conseqlog_strings,
+)
+
+from .contraction import (
+    e_subconjunto,
+    conjunto_das_partes,
+    implica,
+    remainders,
+    kernels,
+    partial_meet_contraction,
+    kernel_contraction,
 )

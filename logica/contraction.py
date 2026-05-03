@@ -1,197 +1,304 @@
 # logica/contraction.py
-#
-# Implementações "corretas para teste" (bases finitas, custo exponencial):
-#   - partial_meet_contraction (remainders + seleção + interseção)
-#   - kernel_contraction       (kernels + incisão)
-#
-# Requer:
-#   - BeliefBase em logica/belief_base.py com atributo .formulas: List[str]
-#   - parse_formula e conseqlog_strings em logica/cp_logic.py
 
 from __future__ import annotations
 
 from itertools import combinations
-from typing import List, Iterable, Set
+from typing import Iterable, List, Set
 
 from .belief_base import BeliefBase
-from .cp_logic import parse_formula, conseqlog_strings, ParseError
+from .cp_logic import (
+    parse_formula,
+    is_tautology,
+    conseqlog_strings,
+)
+
+# ============================================================
+# HELPERS GERAIS
+# ============================================================
 
 
-# --------------------------
-# Helpers
-# --------------------------
+def normalizar_formula(s: str) -> str:
+    return " ".join(s.strip().split())
 
 
-def _norm_str(s: str) -> str:
-    return s.strip()
-
-
-def _parse_list(str_formulas: List[str]):
-    return [parse_formula(_norm_str(x)) for x in str_formulas if _norm_str(x)]
-
-
-def entails(base_strs: List[str], alpha_str: str) -> bool:
+def e_subconjunto(A: List[str], B: List[str]) -> bool:
     """
-    base_strs ⊨ alpha_str usando conseqlog_strings, que já faz parse internamente.
+    Verifica se A ⊆ B.
     """
-    base_clean = [x.strip() for x in base_strs if x.strip()]
-    alpha_clean = alpha_str.strip()
-    return conseqlog_strings(base_clean, alpha_clean)
+    return set(A).issubset(set(B))
 
 
-def _all_subsets(lst: List[str]) -> Iterable[List[str]]:
+def conjunto_das_partes(A: List[str]) -> List[List[str]]:
     """
-    Todos os subconjuntos (listas) de lst.
+    Calcula P(A), isto é, o conjunto de todos os subconjuntos de A.
     """
-    n = len(lst)
-    for r in range(n + 1):
-        for idxs in combinations(range(n), r):
-            yield [lst[i] for i in idxs]
+    A = [normalizar_formula(f) for f in A if normalizar_formula(f)]
+
+    partes: List[List[str]] = []
+
+    for tamanho in range(len(A) + 1):
+        for comb in combinations(A, tamanho):
+            partes.append(list(comb))
+
+    return partes
 
 
-def _is_subset(a: List[str], b: List[str]) -> bool:
-    sb = set(b)
-    return all(x in sb for x in a)
-
-
-def _maximal_non_entailing_subsets(base: List[str], alpha: str) -> List[List[str]]:
+def implica(A: List[str], alpha: str) -> bool:
     """
-    Remainders: subconjuntos maximais de base que NÃO implicam alpha.
+    Verifica se A ⊢ alpha.
     """
-    candidates = []
-    for sub in _all_subsets(base):
-        if not entails(sub, alpha):
-            candidates.append(sub)
+    A = [normalizar_formula(f) for f in A if normalizar_formula(f)]
+    alpha = normalizar_formula(alpha)
 
-    maximals = []
-    for s in candidates:
-        is_max = True
-        for t in candidates:
-            if len(t) > len(s) and _is_subset(s, t):
-                is_max = False
+    return conseqlog_strings(A, alpha)
+
+
+def intersecao_de_conjuntos(conjuntos: List[List[str]]) -> List[str]:
+    """
+    Interseção de vários conjuntos.
+    """
+    if not conjuntos:
+        return []
+
+    inter = set(conjuntos[0])
+
+    for conjunto in conjuntos[1:]:
+        inter.intersection_update(set(conjunto))
+
+    return list(inter)
+
+
+# ============================================================
+# PARTIAL MEET
+# ============================================================
+
+
+def conjuntos_que_nao_implicam(P: List[List[str]], alpha: str) -> List[List[str]]:
+    """
+    Recebe P ⊆ P(A) e devolve os conjuntos que NÃO implicam alpha.
+    """
+    resultado: List[List[str]] = []
+
+    for conjunto in P:
+        if not implica(conjunto, alpha):
+            resultado.append(conjunto)
+
+    return resultado
+
+
+def maximais_por_inclusao(T: List[List[str]]) -> List[List[str]]:
+    """
+    Devolve os elementos de T que não estão contidos propriamente
+    em nenhum outro elemento de T.
+    """
+    maximais: List[List[str]] = []
+
+    for B in T:
+        B_e_maximal = True
+
+        for C in T:
+            if B != C and e_subconjunto(B, C):
+                B_e_maximal = False
                 break
-        if is_max:
-            maximals.append(s)
-    return maximals
+
+        if B_e_maximal:
+            maximais.append(B)
+
+    return maximais
 
 
-def _minimal_entailing_subsets(base: List[str], alpha: str) -> List[List[str]]:
+def remainders(A: List[str], alpha: str) -> List[List[str]]:
     """
-    Kernels: subconjuntos mínimos de base que implicam alpha.
+    Calcula A ⊥ alpha.
+
+    Ou seja, os subconjuntos maximais de A que não implicam alpha.
     """
-    candidates = []
-    for sub in _all_subsets(base):
-        if entails(sub, alpha):
-            candidates.append(sub)
+    A = [normalizar_formula(f) for f in A if normalizar_formula(f)]
+    alpha = normalizar_formula(alpha)
 
-    minimals = []
-    for s in candidates:
-        is_min = True
-        for t in candidates:
-            if len(t) < len(s) and _is_subset(t, s):
-                is_min = False
-                break
-        if is_min:
-            minimals.append(s)
-    return minimals
+    partes = conjunto_das_partes(A)
+    nao_implicam = conjuntos_que_nao_implicam(partes, alpha)
+
+    return maximais_por_inclusao(nao_implicam)
 
 
-def _choose_remainders(remainders: List[List[str]]) -> List[List[str]]:
+def selecionar_remainders(
+    rems: List[List[str]], estrategia: str = "full"
+) -> List[List[str]]:
     """
     Função de seleção γ.
-    Heurística: escolhe os remainders de maior tamanho (mudança mínima).
+
+    Estratégias:
+    - full: seleciona todos os remainders
+    - max_cardinality: seleciona os remainders com maior cardinalidade
+    - first: seleciona apenas o primeiro remainder
     """
-    if not remainders:
+    if not rems:
         return []
-    max_len = max(len(r) for r in remainders)
-    return [r for r in remainders if len(r) == max_len]
+
+    if estrategia == "first":
+        return [rems[0]]
+
+    if estrategia == "max_cardinality":
+        maior = max(len(r) for r in rems)
+        return [r for r in rems if len(r) == maior]
+
+    return rems
 
 
-def _incision(kernels: List[List[str]], base_order: List[str]) -> Set[str]:
+def partial_meet_contraction(
+    base: BeliefBase,
+    alpha: str,
+    estrategia: str = "full",
+) -> BeliefBase:
     """
-    Função de incisão σ:
-    escolher pelo menos 1 fórmula de cada kernel para remover.
+    Contração partial meet para bases finitas.
 
-    Heurística simples:
-    - escolhe, para cada kernel, a primeira fórmula do kernel conforme a ordem original da base.
+    Por defeito usa estratégia full meet:
+    seleciona todos os remainders e faz a interseção.
     """
-    to_remove: Set[str] = set()
-    for ker in kernels:
-        for f in base_order:
-            if f in ker:
-                to_remove.add(f)
+    A = [normalizar_formula(f) for f in base.formulas if normalizar_formula(f)]
+    alpha = normalizar_formula(alpha)
+
+    if not alpha:
+        return BeliefBase(formulas=A)
+
+    alpha_ast = parse_formula(alpha)
+
+    # Failure: se alpha é tautologia, não há contração útil.
+    if is_tautology(alpha_ast):
+        return BeliefBase(formulas=A)
+
+    # Vacuity: se A já não implica alpha, não remove nada.
+    if not implica(A, alpha):
+        return BeliefBase(formulas=A)
+
+    rems = remainders(A, alpha)
+    selecionados = selecionar_remainders(rems, estrategia=estrategia)
+    resultado = intersecao_de_conjuntos(selecionados)
+
+    # Mantém a ordem original da base.
+    resultado_ordenado = [f for f in A if f in resultado]
+
+    return BeliefBase(formulas=resultado_ordenado)
+
+
+# ============================================================
+# KERNEL CONTRACTION
+# ============================================================
+
+
+def conjuntos_que_implicam(P: List[List[str]], alpha: str) -> List[List[str]]:
+    """
+    Recebe P ⊆ P(A) e devolve os conjuntos que implicam alpha.
+    """
+    resultado: List[List[str]] = []
+
+    for conjunto in P:
+        if implica(conjunto, alpha):
+            resultado.append(conjunto)
+
+    return resultado
+
+
+def minimais_por_inclusao(T: List[List[str]]) -> List[List[str]]:
+    """
+    Devolve os elementos de T que não contêm propriamente
+    nenhum outro elemento de T.
+    """
+    minimais: List[List[str]] = []
+
+    for B in T:
+        B_e_minimal = True
+
+        for C in T:
+            if B != C and e_subconjunto(C, B):
+                B_e_minimal = False
                 break
-    return to_remove
+
+        if B_e_minimal:
+            minimais.append(B)
+
+    return minimais
 
 
-# --------------------------
-# Operadores
-# --------------------------
-
-
-def partial_meet_contraction(base: BeliefBase, formula: str) -> BeliefBase:
+def kernels(A: List[str], alpha: str) -> List[List[str]]:
     """
-    Partial meet contraction (para bases finitas):
-      1) Se base ⊭ α => devolve base (vacuity)
-      2) Calcula remainders (subconjuntos maximais que não implicam α)
-      3) Seleciona alguns remainders (γ)
-      4) Interseção dos selecionados
+    Calcula A ⊥⊥ alpha.
 
-    Resultado: BeliefBase com strings (mesmo formato de entrada).
+    Ou seja, os subconjuntos mínimos de A que implicam alpha.
     """
-    alpha = _norm_str(formula)
+    A = [normalizar_formula(f) for f in A if normalizar_formula(f)]
+    alpha = normalizar_formula(alpha)
+
+    partes = conjunto_das_partes(A)
+    implicam_alpha = conjuntos_que_implicam(partes, alpha)
+
+    return minimais_por_inclusao(implicam_alpha)
+
+
+def incisao(kerns: List[List[str]], base_order: List[str]) -> Set[str]:
+    """
+    Função de incisão σ.
+
+    Critério usado:
+    1. Se houver uma fórmula comum a todos os kernels, remove essa fórmula.
+    2. Caso contrário, remove a primeira fórmula de cada kernel,
+       seguindo a ordem original da base.
+
+    Isto garante que pelo menos uma fórmula de cada kernel é removida.
+    """
+    if not kerns:
+        return set()
+
+    comum = set(kerns[0])
+
+    for k in kerns[1:]:
+        comum.intersection_update(set(k))
+
+    if comum:
+        for f in base_order:
+            if f in comum:
+                return {f}
+
+    remover: Set[str] = set()
+
+    for kernel in kerns:
+        for f in base_order:
+            if f in kernel:
+                remover.add(f)
+                break
+
+    return remover
+
+
+def kernel_contraction(base: BeliefBase, alpha: str) -> BeliefBase:
+    """
+    Contração kernel para bases finitas.
+    """
+    A = [normalizar_formula(f) for f in base.formulas if normalizar_formula(f)]
+    alpha = normalizar_formula(alpha)
+
     if not alpha:
-        return BeliefBase(formulas=list(base.formulas))
+        return BeliefBase(formulas=A)
 
-    base_list = [_norm_str(x) for x in base.formulas if _norm_str(x)]
+    alpha_ast = parse_formula(alpha)
 
-    # Se não implica alpha, não muda (vacuity)
-    if not entails(base_list, alpha):
-        return BeliefBase(formulas=list(base_list))
+    # Failure
+    if is_tautology(alpha_ast):
+        return BeliefBase(formulas=A)
 
-    # Remainders
-    remainders = _maximal_non_entailing_subsets(base_list, alpha)
-    if not remainders:
-        # Caso extremo: remove tudo
-        return BeliefBase(formulas=[])
+    # Vacuity
+    if not implica(A, alpha):
+        return BeliefBase(formulas=A)
 
-    selected = _choose_remainders(remainders)
-    if not selected:
-        return BeliefBase(formulas=[])
+    kerns = kernels(A, alpha)
 
-    # Interseção
-    inter = set(selected[0])
-    for r in selected[1:]:
-        inter.intersection_update(r)
+    if not kerns:
+        return BeliefBase(formulas=A)
 
-    # manter ordem original
-    result = [x for x in base_list if x in inter]
-    return BeliefBase(formulas=result)
+    formulas_a_remover = incisao(kerns, A)
 
+    resultado = [f for f in A if f not in formulas_a_remover]
 
-def kernel_contraction(base: BeliefBase, formula: str) -> BeliefBase:
-    """
-    Kernel contraction (para bases finitas):
-      1) Se base ⊭ α => devolve base (vacuity)
-      2) Calcula kernels (subconjuntos mínimos que implicam α)
-      3) σ escolhe pelo menos um elemento de cada kernel para remover
-      4) Remove os escolhidos
-
-    Resultado: BeliefBase com strings.
-    """
-    alpha = _norm_str(formula)
-    if not alpha:
-        return BeliefBase(formulas=list(base.formulas))
-
-    base_list = [_norm_str(x) for x in base.formulas if _norm_str(x)]
-
-    if not entails(base_list, alpha):
-        return BeliefBase(formulas=list(base_list))
-
-    kernels = _minimal_entailing_subsets(base_list, alpha)
-    if not kernels:
-        return BeliefBase(formulas=list(base_list))
-
-    to_remove = _incision(kernels, base_list)
-    result = [x for x in base_list if x not in to_remove]
-    return BeliefBase(formulas=result)
+    return BeliefBase(formulas=resultado)
