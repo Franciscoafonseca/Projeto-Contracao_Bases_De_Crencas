@@ -1,5 +1,3 @@
-# logica/__init__.py
-
 from .belief_base import BeliefBase
 
 from .cp_logic import (
@@ -24,6 +22,10 @@ from .contraction import (
     implica,
     remainders,
     kernels,
+    selecionar_remainders,
+    incisao,
     partial_meet_contraction,
     kernel_contraction,
+    partial_meet_contraction_with_steps,
+    kernel_contraction_with_steps,
 )

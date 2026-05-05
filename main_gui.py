@@ -12,6 +12,8 @@ from logica import (
     BeliefBase,
     partial_meet_contraction,
     kernel_contraction,
+    partial_meet_contraction_with_steps,
+    kernel_contraction_with_steps,
     remainders,
     kernels,
     ParseError,
@@ -19,6 +21,7 @@ from logica import (
     is_cp_formula,
     is_tautology,
     conseqlog_strings,
+    selecionar_remainders,
 )
 
 # ============================================================
@@ -191,6 +194,9 @@ class BeliefApp(ctk.CTk):
         self.base = BeliefBase()
         self.selected_index: int | None = None
 
+        self.pm_strategy = ctk.StringVar(value="Full meet")
+        self.kernel_strategy = ctk.StringVar(value="Comum se existir")
+
         self._build_ui()
         self._refresh_base_view()
 
@@ -353,7 +359,7 @@ class BeliefApp(ctk.CTk):
         right = make_card(parent, alt=True)
         right.grid(row=0, column=1, sticky="nsew", padx=(10, 0), pady=8)
         right.grid_columnconfigure(0, weight=1)
-        right.grid_rowconfigure(8, weight=1)
+        right.grid_rowconfigure(9, weight=1)
 
         section_title(right, "Nova fórmula", self.font_section).grid(
             row=0, column=0, sticky="w", padx=14, pady=(10, 4)
@@ -393,9 +399,58 @@ class BeliefApp(ctk.CTk):
         )
         self.entry_target.grid(row=4, column=0, sticky="ew", padx=14, pady=(0, 6))
         self.entry_target.bind("<Return>", lambda event: self._contract_partial_meet())
+        strategy_frame = ctk.CTkFrame(right, fg_color="transparent")
+        strategy_frame.grid(row=5, column=0, sticky="ew", padx=14, pady=(0, 8))
+        strategy_frame.grid_columnconfigure((0, 1), weight=1)
+
+        pm_box = ctk.CTkFrame(strategy_frame, fg_color="transparent")
+        pm_box.grid(row=0, column=0, sticky="ew", padx=(0, 5))
+        pm_box.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(
+            pm_box,
+            text="Seleção γ",
+            font=self.font_small,
+            text_color=COLORS["muted"],
+        ).grid(row=0, column=0, sticky="w", pady=(0, 2))
+
+        self.combo_pm_strategy = ctk.CTkOptionMenu(
+            pm_box,
+            values=["Full meet", "Maxichoice", "Maior cardinalidade"],
+            variable=self.pm_strategy,
+            height=30,
+            font=self.font_small,
+            fg_color=COLORS["primary"],
+            button_color=COLORS["primary"],
+            button_hover_color=COLORS["primary_light"],
+        )
+        self.combo_pm_strategy.grid(row=1, column=0, sticky="ew")
+
+        kernel_box = ctk.CTkFrame(strategy_frame, fg_color="transparent")
+        kernel_box.grid(row=0, column=1, sticky="ew", padx=(5, 0))
+        kernel_box.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(
+            kernel_box,
+            text="Incisão σ",
+            font=self.font_small,
+            text_color=COLORS["muted"],
+        ).grid(row=0, column=0, sticky="w", pady=(0, 2))
+
+        self.combo_kernel_strategy = ctk.CTkOptionMenu(
+            kernel_box,
+            values=["Comum se existir", "Primeira por kernel", "Incisão mínima"],
+            variable=self.kernel_strategy,
+            height=30,
+            font=self.font_small,
+            fg_color=COLORS["primary"],
+            button_color=COLORS["primary"],
+            button_hover_color=COLORS["primary_light"],
+        )
+        self.combo_kernel_strategy.grid(row=1, column=0, sticky="ew")
 
         buttons1 = ctk.CTkFrame(right, fg_color="transparent")
-        buttons1.grid(row=5, column=0, sticky="ew", padx=14, pady=(0, 6))
+        buttons1.grid(row=6, column=0, sticky="ew", padx=14, pady=(0, 6))
         buttons1.grid_columnconfigure((0, 1), weight=1)
 
         primary_button(
@@ -413,7 +468,7 @@ class BeliefApp(ctk.CTk):
         ).grid(row=0, column=1, sticky="ew", padx=(4, 0))
 
         buttons2 = ctk.CTkFrame(right, fg_color="transparent")
-        buttons2.grid(row=6, column=0, sticky="ew", padx=14, pady=(0, 6))
+        buttons2.grid(row=7, column=0, sticky="ew", padx=14, pady=(0, 6))
         buttons2.grid_columnconfigure((0, 1), weight=1)
 
         secondary_button(
@@ -438,14 +493,14 @@ class BeliefApp(ctk.CTk):
             wraplength=360,
             justify="center",
         )
-        hint.grid(row=7, column=0, sticky="ew", padx=14, pady=(0, 8))
+        hint.grid(row=8, column=0, sticky="ew", padx=14, pady=(0, 8))
 
         log_card = ctk.CTkFrame(
             right,
             fg_color=COLORS["log"],
             corner_radius=12,
         )
-        log_card.grid(row=8, column=0, sticky="nsew", padx=14, pady=(0, 10))
+        log_card.grid(row=9, column=0, sticky="nsew", padx=14, pady=(0, 10))
         log_card.grid_rowconfigure(1, weight=1)
         log_card.grid_columnconfigure(0, weight=1)
 
@@ -803,14 +858,21 @@ class BeliefApp(ctk.CTk):
         if not self._warn_if_large_base():
             return
 
+        estrategia = self._pm_strategy_value()
+
         try:
             rs = remainders(self.base.formulas, target)
+            selected = selecionar_remainders(rs, estrategia=estrategia)
         except Exception as e:
             self._log(f"Erro ao calcular remainders: {e}")
             return
 
+        self._log("")
         self._log(f"Remainders de A por {target}:")
         self._log(self._format_set_of_sets(rs))
+        self._log(f"Estratégia γ atual: {estrategia}")
+        self._log("Remainders selecionados:")
+        self._log(self._format_set_of_sets(selected))
 
     def _show_kernels(self) -> None:
         target = self._get_target_formula()
@@ -839,11 +901,15 @@ class BeliefApp(ctk.CTk):
         if not self._warn_if_large_base():
             return
 
+        estrategia = self._pm_strategy_value()
         before = list(self.base.formulas)
 
         try:
-            rs = remainders(before, target)
-            self.base = partial_meet_contraction(self.base, target)
+            self.base, steps = partial_meet_contraction_with_steps(
+                self.base,
+                target,
+                estrategia=estrategia,
+            )
         except Exception as e:
             self._log(f"Erro na contração Partial Meet: {e}")
             return
@@ -852,9 +918,11 @@ class BeliefApp(ctk.CTk):
 
         self._refresh_base_view()
 
-        self._log(f"Partial Meet aplicado a: {target}")
-        self._log("Remainders:")
-        self._log(self._format_set_of_sets(rs))
+        self._log("")
+        self._log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        for step in steps:
+            self._log(step)
+        self._log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         self._log(f"Antes: {self._format_base(before)}")
         self._log(f"Depois: {self._format_base(after)}")
 
@@ -867,11 +935,15 @@ class BeliefApp(ctk.CTk):
         if not self._warn_if_large_base():
             return
 
+        estrategia = self._kernel_strategy_value()
         before = list(self.base.formulas)
 
         try:
-            ks = kernels(before, target)
-            self.base = kernel_contraction(self.base, target)
+            self.base, steps = kernel_contraction_with_steps(
+                self.base,
+                target,
+                estrategia=estrategia,
+            )
         except Exception as e:
             self._log(f"Erro na contração Kernel: {e}")
             return
@@ -880,9 +952,11 @@ class BeliefApp(ctk.CTk):
 
         self._refresh_base_view()
 
-        self._log(f"Kernel aplicado a: {target}")
-        self._log("Kernels:")
-        self._log(self._format_set_of_sets(ks))
+        self._log("")
+        self._log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        for step in steps:
+            self._log(step)
+        self._log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         self._log(f"Antes: {self._format_base(before)}")
         self._log(f"Depois: {self._format_base(after)}")
 
@@ -947,6 +1021,22 @@ class BeliefApp(ctk.CTk):
             self._cp_log(f"{premises} ⊨ {conclusion}")
         else:
             self._cp_log(f"{premises} ⊭ {conclusion}")
+
+    def _pm_strategy_value(self) -> str:
+        mapping = {
+            "Full meet": "full",
+            "Maxichoice": "first",
+            "Maior cardinalidade": "max_cardinality",
+        }
+        return mapping.get(self.pm_strategy.get(), "full")
+
+    def _kernel_strategy_value(self) -> str:
+        mapping = {
+            "Comum se existir": "common_first",
+            "Primeira por kernel": "first_each",
+            "Incisão mínima": "min_hitting",
+        }
+        return mapping.get(self.kernel_strategy.get(), "common_first")
 
 
 if __name__ == "__main__":
