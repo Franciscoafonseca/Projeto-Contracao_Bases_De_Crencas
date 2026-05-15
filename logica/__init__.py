@@ -27,5 +27,7 @@ from .contraction import (
     partial_meet_contraction,
     kernel_contraction,
     partial_meet_contraction_with_steps,
+    partial_meet_contraction_manual_with_steps,
     kernel_contraction_with_steps,
+    kernel_contraction_manual_with_steps,
 )

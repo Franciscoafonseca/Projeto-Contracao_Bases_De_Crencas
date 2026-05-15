@@ -93,19 +93,17 @@ def format_set_text(A: List[str]) -> str:
     return "{ " + "; ".join(A) + " }"
 
 
-def format_set_of_sets_text(conjuntos: List[List[str]]) -> str:
-    """
-    Formata um conjunto de conjuntos.
-    """
-    if not conjuntos:
+def format_set_of_sets_text(sets: List[List[str]]) -> str:
+    if not sets:
         return "∅"
 
-    linhas = []
+    lines = []
 
-    for i, conjunto in enumerate(conjuntos, start=1):
-        linhas.append(f"{i}. {format_set_text(conjunto)}")
+    for i, conjunto in enumerate(sets, start=1):
+        content = "; ".join(conjunto) if conjunto else "∅"
+        lines.append(f"{i}. {{ {content} }}")
 
-    return "\n".join(linhas)
+    return "\n".join(lines)
 
 
 # ============================================================
@@ -234,12 +232,12 @@ def partial_meet_contraction_with_steps(
     steps.append("2. Vacuity")
 
     if not implica(A, alpha):
-        steps.append(f"A não implica α, isto é, A ⊬ {alpha}.")
+        steps.append(f"A não implica a fórmula alvo {alpha}.")
         steps.append("Logo, não é necessário remover nada.")
         steps.append("Resultado: base inalterada.")
         return BeliefBase(formulas=A), steps
 
-    steps.append(f"A implica α, isto é, A ⊢ {alpha}.")
+    steps.append(f"A implica a fórmula alvo {alpha}.")
     steps.append("Logo, é necessário contrair a base.")
 
     # 3. Cálculo dos remainders
@@ -297,6 +295,106 @@ def partial_meet_contraction(
         estrategia=estrategia,
     )
     return nova_base
+
+
+def partial_meet_contraction_manual_with_steps(
+    base: BeliefBase,
+    alpha: str,
+    remainders_selecionados: List[List[str]],
+) -> tuple[BeliefBase, List[str]]:
+    """
+    Contração Partial Meet com seleção manual de remainders.
+
+    O utilizador escolhe explicitamente quais elementos de A⊥α
+    serão usados pela função de seleção γ.
+    """
+
+    steps: List[str] = []
+
+    A = [normalizar_formula(f) for f in base.formulas if normalizar_formula(f)]
+    alpha = normalizar_formula(alpha)
+
+    steps.append("=== Partial Meet Contraction — Seleção Manual ===")
+    steps.append(f"Base inicial A: {format_base_text(A)}")
+    steps.append(f"Fórmula alvo α: {alpha}")
+    steps.append("Estratégia γ: manual")
+
+    if not alpha:
+        steps.append("α é vazio. A base é devolvida sem alterações.")
+        return BeliefBase(formulas=A), steps
+
+    alpha_ast = parse_formula(alpha)
+
+    # 1. Failure
+    steps.append("")
+    steps.append("1. Failure")
+
+    if is_tautology(alpha_ast):
+        steps.append(f"α = {alpha} é tautologia.")
+        steps.append("Não é possível deixar de implicar uma tautologia.")
+        steps.append("Resultado: base inalterada.")
+        return BeliefBase(formulas=A), steps
+
+    steps.append(f"α = {alpha} não é tautologia.")
+
+    # 2. Vacuity
+    steps.append("")
+    steps.append("2. Vacuity")
+
+    if not implica(A, alpha):
+        steps.append(f"A não implica α, isto é, A ⊬ {alpha}.")
+        steps.append("Logo, não é necessário remover nada.")
+        steps.append("Resultado: base inalterada.")
+        return BeliefBase(formulas=A), steps
+
+    steps.append(f"A implica α, isto é, A ⊢ {alpha}.")
+    steps.append("Logo, é necessário contrair a base.")
+
+    # 3. Calcular todos os remainders
+    steps.append("")
+    steps.append("3. Cálculo dos remainders")
+
+    rems = remainders(A, alpha)
+
+    steps.append("Remainders encontrados:")
+    steps.append(format_set_of_sets_text(rems))
+
+    # 4. Validar seleção manual
+    steps.append("")
+    steps.append("4. Seleção manual da função γ")
+
+    if not remainders_selecionados:
+        raise ValueError("Na seleção manual, tens de escolher pelo menos um remainder.")
+
+    rems_normalizados = {frozenset(normalizar_formula(f) for f in r) for r in rems}
+
+    selecionados_normalizados: List[List[str]] = []
+
+    for r in remainders_selecionados:
+        r_norm = [normalizar_formula(f) for f in r if normalizar_formula(f)]
+        if frozenset(r_norm) not in rems_normalizados:
+            raise ValueError(
+                "A seleção manual contém um conjunto que não é remainder válido."
+            )
+        selecionados_normalizados.append(r_norm)
+
+    steps.append("Remainders escolhidos pelo utilizador:")
+    steps.append(format_set_of_sets_text(selecionados_normalizados))
+
+    # 5. Interseção
+    steps.append("")
+    steps.append("5. Interseção dos remainders escolhidos")
+
+    resultado = intersecao_de_conjuntos(selecionados_normalizados)
+
+    # Mantém a ordem original da base
+    resultado_ordenado = [f for f in A if f in resultado]
+
+    steps.append(f"Resultado da interseção: {format_base_text(resultado_ordenado)}")
+    steps.append("")
+    steps.append(f"Base final: {format_base_text(resultado_ordenado)}")
+
+    return BeliefBase(formulas=resultado_ordenado), steps
 
 
 # ============================================================
@@ -531,6 +629,119 @@ def kernel_contraction_with_steps(
     steps.append("5. Remoção das fórmulas escolhidas")
 
     resultado = [f for f in A if f not in formulas_a_remover]
+
+    steps.append(f"Base final: {format_base_text(resultado)}")
+
+    return BeliefBase(formulas=resultado), steps
+
+
+def kernel_contraction_manual_with_steps(
+    base: BeliefBase,
+    alpha: str,
+    formulas_a_remover: List[str] | Set[str],
+) -> tuple[BeliefBase, List[str]]:
+    """
+    Contração Kernel com incisão manual.
+
+    O utilizador escolhe explicitamente quais fórmulas remover.
+    A escolha é válida se tocar/intersetar todos os kernels.
+    """
+
+    steps: List[str] = []
+
+    A = [normalizar_formula(f) for f in base.formulas if normalizar_formula(f)]
+    alpha = normalizar_formula(alpha)
+
+    formulas_a_remover_set: Set[str] = {
+        normalizar_formula(f) for f in formulas_a_remover if normalizar_formula(f)
+    }
+
+    steps.append("=== Kernel Contraction — Incisão Manual ===")
+    steps.append(f"Base inicial A: {format_base_text(A)}")
+    steps.append(f"Fórmula alvo α: {alpha}")
+    steps.append("Estratégia σ: manual")
+
+    if not alpha:
+        steps.append("α é vazio. A base é devolvida sem alterações.")
+        return BeliefBase(formulas=A), steps
+
+    alpha_ast = parse_formula(alpha)
+
+    # 1. Failure
+    steps.append("")
+    steps.append("1. Failure")
+
+    if is_tautology(alpha_ast):
+        steps.append(f"α = {alpha} é tautologia.")
+        steps.append("Não é possível deixar de implicar uma tautologia.")
+        steps.append("Resultado: base inalterada.")
+        return BeliefBase(formulas=A), steps
+
+    steps.append(f"α = {alpha} não é tautologia.")
+
+    # 2. Vacuity
+    steps.append("")
+    steps.append("2. Vacuity")
+
+    if not implica(A, alpha):
+        steps.append(f"A não implica α, isto é, A ⊬ {alpha}.")
+        steps.append("Logo, não é necessário remover nada.")
+        steps.append("Resultado: base inalterada.")
+        return BeliefBase(formulas=A), steps
+
+    steps.append(f"A implica α, isto é, A ⊢ {alpha}.")
+    steps.append("Logo, é necessário contrair a base.")
+
+    # 3. Kernels
+    steps.append("")
+    steps.append("3. Cálculo dos kernels")
+
+    partes = conjunto_das_partes(A)
+    steps.append(f"Foram gerados {len(partes)} subconjuntos de A.")
+
+    implicam_alpha = conjuntos_que_implicam(partes, alpha)
+    steps.append(f"Desses, {len(implicam_alpha)} implicam α.")
+
+    kerns = minimais_por_inclusao(implicam_alpha)
+
+    steps.append("Kernels encontrados:")
+    steps.append(format_set_of_sets_text(kerns))
+
+    if not kerns:
+        steps.append("Nenhum kernel encontrado. Base devolvida sem alterações.")
+        return BeliefBase(formulas=A), steps
+
+    # 4. Validação da incisão manual
+    steps.append("")
+    steps.append("4. Validação da incisão manual σ")
+
+    if not formulas_a_remover_set:
+        raise ValueError("Na incisão manual, tens de escolher pelo menos uma fórmula.")
+
+    formulas_invalidas = formulas_a_remover_set.difference(set(A))
+
+    if formulas_invalidas:
+        raise ValueError(
+            "A incisão manual contém fórmulas que não pertencem à base: "
+            + format_base_text(sorted(formulas_invalidas))
+        )
+
+    if not hitting_set_valido(formulas_a_remover_set, kerns):
+        raise ValueError(
+            "Incisão inválida: as fórmulas escolhidas não tocam em todos os kernels."
+        )
+
+    formulas_ordenadas = [f for f in A if f in formulas_a_remover_set]
+
+    steps.append("Fórmulas escolhidas pelo utilizador:")
+    steps.append(format_base_text(formulas_ordenadas))
+    steps.append("A incisão é válida: toca em todos os kernels.")
+
+    # 5. Resultado
+    steps.append("")
+    steps.append("5. Remoção das fórmulas escolhidas")
+
+    resultado = [f for f in A if f not in formulas_a_remover_set]
 
     steps.append(f"Base final: {format_base_text(resultado)}")
 
