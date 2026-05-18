@@ -9,18 +9,74 @@ from .widgets import (
     section_title,
     secondary_button,
     danger_button,
-    success_button,
     pm_button,
-    explore_button,
+    pm_outline_button,
     export_button,
 )
 
 
+class _SelectedFormulaDisplay:
+    """Pequeno adaptador para permitir 'Selecionada #n:' em destaque.
+
+    Mantém compatibilidade com actions.py antigo, que faz:
+        app.pm_label_selected.configure(text="Selecionada #2: ...")
+
+    E também com actions.py novo, que pode configurar separadamente:
+        app.pm_label_selected_prefix.configure(text="Selecionada #2: ")
+        app.pm_label_selected.configure(text="p imp q")
+    """
+
+    def __init__(self, prefix_label: ctk.CTkLabel, value_label: ctk.CTkLabel):
+        self.prefix_label = prefix_label
+        self.value_label = value_label
+
+    def configure(self, **kwargs) -> None:
+        text = kwargs.pop("text", None)
+        text_color = kwargs.get("text_color", None)
+
+        if text is not None:
+            if str(text).startswith("Selecionada #") and ":" in str(text):
+                prefix, value = str(text).split(":", 1)
+                self.prefix_label.configure(text=prefix + ": ")
+                self.value_label.configure(text=value.strip())
+            elif str(text).startswith("Nenhuma fórmula"):
+                self.prefix_label.configure(text="")
+                self.value_label.configure(text=text)
+            else:
+                # Se o prefixo já foi configurado por actions.py novo,
+                # preserva-o e muda apenas o valor.
+                self.value_label.configure(text=text)
+
+        if text_color is not None:
+            self.value_label.configure(text_color=text_color)
+
+        extra_kwargs = {k: v for k, v in kwargs.items() if k != "text_color"}
+        if extra_kwargs:
+            self.value_label.configure(**extra_kwargs)
+
+
 def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
+    # Fontes locais para esta aba. Se a fonte não existir, o Tk faz fallback.
+    font_section = ctk.CTkFont(
+        family="Segoe UI Variable Display",
+        size=16,
+        weight="bold",
+    )
+    font_label = ctk.CTkFont(
+        family="Segoe UI Variable Text",
+        size=12,
+        weight="bold",
+    )
+    font_selected_bold = ctk.CTkFont(
+        family="Segoe UI Variable Text",
+        size=12,
+        weight="bold",
+    )
+
     parent.grid_rowconfigure(0, weight=1)
-    parent.grid_columnconfigure(0, weight=2)
-    parent.grid_columnconfigure(1, weight=2)
-    parent.grid_columnconfigure(2, weight=3)
+    parent.grid_columnconfigure(0, weight=2, minsize=360)
+    parent.grid_columnconfigure(1, weight=2, minsize=370)
+    parent.grid_columnconfigure(2, weight=3, minsize=460)
 
     # ============================================================
     # BASE PARTIAL MEET
@@ -31,7 +87,7 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
     base_card.grid_rowconfigure(5, weight=1)
     base_card.grid_columnconfigure(0, weight=1)
 
-    header = ctk.CTkFrame(base_card, fg_color="transparent", height=34)
+    header = ctk.CTkFrame(base_card, fg_color="transparent", height=36)
     header.grid(row=0, column=0, sticky="ew", padx=16, pady=(12, 6))
     header.grid_propagate(False)
     header.grid_columnconfigure(0, weight=1)
@@ -39,7 +95,7 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
     section_title(
         header,
         "Base Partial Meet",
-        app.font_section,
+        font_section,
         color_key="pm",
     ).grid(row=0, column=0, sticky="w")
 
@@ -54,7 +110,7 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
     app.entry_pm_formula = ctk.CTkEntry(
         base_card,
         placeholder_text="Adicionar fórmula. Ex: p; p imp q",
-        height=34,
+        height=36,
         fg_color=COLORS["input"],
         border_color=COLORS["border"],
         text_color=COLORS["text"],
@@ -66,14 +122,14 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
         lambda event: app._add_formula_to("pm"),
     )
 
-    success_button(
+    pm_button(
         base_card,
         "Adicionar fórmula à base",
         lambda: app._add_formula_to("pm"),
         app.font_small,
     ).grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 8))
 
-    file_buttons = ctk.CTkFrame(base_card, fg_color="transparent", height=38)
+    file_buttons = ctk.CTkFrame(base_card, fg_color="transparent", height=40)
     file_buttons.grid(row=3, column=0, sticky="ew", padx=16, pady=(0, 8))
     file_buttons.grid_propagate(False)
     file_buttons.grid_columnconfigure((0, 1), weight=1)
@@ -83,6 +139,7 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
         "Guardar base",
         lambda: app._save_base_to_file("pm"),
         app.font_small,
+        variant="pm",
     ).grid(row=0, column=0, sticky="ew", padx=(0, 5))
 
     secondary_button(
@@ -90,6 +147,7 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
         "Carregar base",
         lambda: app._load_base_from_file("pm"),
         app.font_small,
+        variant="pm",
     ).grid(row=0, column=1, sticky="ew", padx=(5, 0))
 
     app.pm_text_base = ctk.CTkTextbox(
@@ -103,34 +161,65 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
         activate_scrollbars=True,
     )
     app.pm_text_base.grid(row=5, column=0, sticky="nsew", padx=16, pady=(0, 8))
-    app.pm_text_base.tag_config("selected_line", background=COLORS["pm_soft"])
-    app.pm_text_base.bind(
-        "<Button-1>",
-        lambda event: app._on_operator_base_click("pm", event),
+    app.pm_text_base.tag_config(
+        "selected_line",
+        background=COLORS.get("pm_panel_strong", COLORS["pm_soft"]),
+        foreground=COLORS["text"],
     )
+
+    def _handle_pm_base_click(event):
+        app._on_operator_base_click("pm", event)
+        return "break"
+
+    app.pm_text_base.bind("<Button-1>", _handle_pm_base_click)
     app.pm_text_base.bind("<Key>", lambda event: "break")
 
-    bottom = ctk.CTkFrame(base_card, fg_color="transparent", height=40)
+    bottom = ctk.CTkFrame(base_card, fg_color="transparent", height=78)
     bottom.grid(row=6, column=0, sticky="ew", padx=16, pady=(0, 12))
     bottom.grid_propagate(False)
-    bottom.grid_columnconfigure(0, weight=1)
+    bottom.grid_columnconfigure((0, 1), weight=1)
 
-    app.pm_label_selected = ctk.CTkLabel(
-        bottom,
+    selected_row = ctk.CTkFrame(bottom, fg_color="transparent")
+    selected_row.grid(
+        row=0,
+        column=0,
+        columnspan=2,
+        sticky="ew",
+        pady=(0, 6),
+    )
+    selected_row.grid_columnconfigure(1, weight=1)
+
+    app.pm_label_selected_prefix = ctk.CTkLabel(
+        selected_row,
+        text="",
+        font=font_selected_bold,
+        text_color=COLORS.get("pm_dark", COLORS["pm"]),
+        anchor="w",
+    )
+    app.pm_label_selected_prefix.grid(row=0, column=0, sticky="w")
+
+    pm_label_selected_value = ctk.CTkLabel(
+        selected_row,
         text="Nenhuma fórmula selecionada",
         font=app.font_small,
         text_color=COLORS["muted"],
         anchor="w",
     )
-    app.pm_label_selected.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+    pm_label_selected_value.grid(row=0, column=1, sticky="ew")
+
+    app.pm_label_selected = _SelectedFormulaDisplay(
+        app.pm_label_selected_prefix,
+        pm_label_selected_value,
+    )
 
     app.pm_btn_remove = secondary_button(
         bottom,
         "Remover selecionada",
         lambda: app._remove_selected_from("pm"),
         app.font_small,
+        variant="pm",
     )
-    app.pm_btn_remove.grid(row=0, column=1, sticky="e", padx=(0, 8))
+    app.pm_btn_remove.grid(row=1, column=0, sticky="ew", padx=(0, 5))
     app.pm_btn_remove.configure(state="disabled")
 
     danger_button(
@@ -138,34 +227,38 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
         "Limpar",
         lambda: app._clear_base_for("pm"),
         app.font_small,
-    ).grid(row=0, column=2, sticky="e")
+    ).grid(row=1, column=1, sticky="ew", padx=(5, 0))
 
     # ============================================================
     # OPERAÇÃO PARTIAL MEET
     # ============================================================
 
     operation_card = make_card(parent, alt=True)
+    operation_card.configure(
+        fg_color=COLORS.get("pm_panel", COLORS["pm_soft"]),
+        border_color=COLORS.get("pm_border", COLORS["border"]),
+    )
     operation_card.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
     operation_card.grid_columnconfigure(0, weight=1)
 
     section_title(
         operation_card,
         "Operação Partial Meet",
-        app.font_section,
+        font_section,
         color_key="pm",
     ).grid(row=0, column=0, sticky="w", padx=16, pady=(12, 8))
 
     ctk.CTkLabel(
         operation_card,
         text="1. Fórmula a contrair α",
-        font=app.font_small,
-        text_color=COLORS["muted_dark"],
+        font=font_label,
+        text_color=COLORS.get("pm_dark", COLORS["pm"]),
     ).grid(row=1, column=0, sticky="w", padx=16, pady=(0, 4))
 
     app.entry_pm_target = ctk.CTkEntry(
         operation_card,
         placeholder_text="Ex: r",
-        height=34,
+        height=36,
         fg_color=COLORS["input"],
         border_color=COLORS["border"],
         text_color=COLORS["text"],
@@ -180,8 +273,8 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
     ctk.CTkLabel(
         operation_card,
         text="2. Função de seleção γ",
-        font=app.font_small,
-        text_color=COLORS["muted_dark"],
+        font=font_label,
+        text_color=COLORS.get("pm_dark", COLORS["pm"]),
     ).grid(row=3, column=0, sticky="w", padx=16, pady=(0, 4))
 
     app.combo_pm_strategy = ctk.CTkOptionMenu(
@@ -194,18 +287,18 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
             "Todas as seleções possíveis",
         ],
         variable=app.pm_strategy,
-        height=34,
+        height=36,
         font=app.font_small,
         fg_color=COLORS["pm"],
-        button_color=COLORS["pm"],
-        button_hover_color=COLORS["pm_light"],
+        button_color=COLORS.get("pm_dark", COLORS["pm"]),
+        button_hover_color=COLORS["pm_hover"],
         dropdown_fg_color="#ffffff",
         dropdown_hover_color=COLORS["pm_soft"],
         text_color="white",
     )
     app.combo_pm_strategy.grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 14))
 
-    secondary_button(
+    pm_outline_button(
         operation_card,
         "Ver remainders antes de contrair",
         app._show_remainders,
@@ -214,38 +307,24 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
 
     pm_button(
         operation_card,
-        "Aplicar Partial Meet à base",
+        "Executar opção selecionada",
         app._run_partial_meet_selected_mode,
         app.font_small,
-    ).grid(row=6, column=0, sticky="ew", padx=16, pady=(0, 8))
-
-    explore_button(
-        operation_card,
-        "Explorar todas as seleções possíveis",
-        app._show_all_partial_meet_options,
-        app.font_small,
-    ).grid(row=7, column=0, sticky="ew", padx=16, pady=(0, 8))
-
-    export_button(
-        operation_card,
-        "Exportar último relatório PDF",
-        lambda: app._export_last_operation_pdf("Partial Meet"),
-        app.font_small,
-    ).grid(row=8, column=0, sticky="ew", padx=16, pady=(0, 14))
+    ).grid(row=6, column=0, sticky="ew", padx=16, pady=(0, 14))
 
     explanation = ctk.CTkFrame(
         operation_card,
-        fg_color=COLORS["pm_soft"],
+        fg_color=COLORS.get("pm_panel_strong", COLORS["pm_soft"]),
         corner_radius=14,
     )
-    explanation.grid(row=9, column=0, sticky="ew", padx=16, pady=(0, 14))
+    explanation.grid(row=7, column=0, sticky="ew", padx=16, pady=(0, 14))
     explanation.grid_columnconfigure(0, weight=1)
 
     ctk.CTkLabel(
         explanation,
         text="Como ler esta aba",
-        font=app.font_section,
-        text_color=COLORS["pm"],
+        font=font_section,
+        text_color=COLORS.get("pm_dark", COLORS["pm"]),
         anchor="w",
     ).grid(row=0, column=0, sticky="ew", padx=12, pady=(10, 4))
 
@@ -254,8 +333,8 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
         text=(
             "Partial Meet calcula os remainders de A por α.\n"
             "Depois escolhe alguns remainders com γ e interseta-os.\n\n"
-            "A opção de exploração não altera a base: mostra todas as bases "
-            "que poderiam resultar de todas as seleções possíveis."
+            "Escolhe a opção no menu acima e carrega em "
+            "Executar opção selecionada. A opção de exploração não altera a base."
         ),
         font=app.font_small,
         text_color=COLORS["text"],
@@ -280,11 +359,11 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
     result_header.grid(row=0, column=0, sticky="ew", padx=12, pady=(12, 8))
     result_header.grid_columnconfigure(0, weight=1)
 
-    ctk.CTkLabel(
+    section_title(
         result_header,
-        text="Resultados Partial Meet",
-        font=app.font_section,
-        text_color=COLORS["pm"],
+        "Resultados Partial Meet",
+        font_section,
+        color_key="pm",
     ).grid(row=0, column=0, sticky="w", padx=12, pady=8)
 
     secondary_button(
@@ -292,6 +371,7 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
         "Limpar",
         app._clear_pm_log,
         app.font_small,
+        variant="pm",
     ).grid(row=0, column=1, sticky="e", padx=8, pady=6)
 
     app.text_pm_log = ctk.CTkTextbox(
@@ -303,8 +383,21 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
         corner_radius=12,
         activate_scrollbars=True,
     )
-    app.text_pm_log.grid(row=1, column=0, sticky="nsew", padx=14, pady=(0, 14))
+    app.text_pm_log.grid(row=1, column=0, sticky="nsew", padx=14, pady=(0, 8))
     app.text_pm_log.bind("<Key>", lambda event: "break")
+    app._configure_log_tags(app.text_pm_log)
+
+    result_footer = ctk.CTkFrame(result_card, fg_color="transparent", height=44)
+    result_footer.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 12))
+    result_footer.grid_propagate(False)
+    result_footer.grid_columnconfigure(0, weight=1)
+
+    export_button(
+        result_footer,
+        "Guardar último relatório em PDF",
+        lambda: app._export_last_operation_pdf("Partial Meet"),
+        app.font_small,
+    ).grid(row=0, column=0, sticky="ew")
 
     app._pm_log("Partial Meet pronto.")
-    app._pm_log("Cria uma base nesta aba, escolhe α e aplica uma estratégia.")
+    app._pm_log("Cria uma base nesta aba, escolhe α e executa a opção.")

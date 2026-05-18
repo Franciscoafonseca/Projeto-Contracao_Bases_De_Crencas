@@ -4,7 +4,7 @@ import customtkinter as ctk
 
 from logica import BeliefBase
 
-from .theme import COLORS
+from .theme import COLORS, TITLE_FONT, APP_FONT, MONO_FONT
 from .utils import resource_path
 from .cp_tab import build_tab_cp
 from .partial_meet_tab import build_tab_partial_meet
@@ -22,35 +22,23 @@ class BeliefApp(AppActions, ctk.CTk):
             pass
 
         self.title("Projeto Crenças – Partial Meet e Kernel")
-        self.geometry("1260x760")
-        self.minsize(1080, 680)
+
         self.resizable(True, True)
         self.configure(fg_color=COLORS["bg_main"])
 
         self.last_operation = None
 
-        self.font_title = ctk.CTkFont(
-            family="Segoe UI",
-            size=20,
-            weight="bold",
-        )
-        self.font_section = ctk.CTkFont(
-            family="Segoe UI",
-            size=14,
-            weight="bold",
-        )
-        self.font_body = ctk.CTkFont(
-            family="Segoe UI",
-            size=12,
-        )
-        self.font_small = ctk.CTkFont(
-            family="Segoe UI",
-            size=11,
-        )
-        self.font_mono = ctk.CTkFont(
-            family="Cascadia Code",
-            size=12,
-        )
+        self.geometry("1320x780")
+        self.minsize(1240, 720)
+
+        self.font_title = ctk.CTkFont(family=TITLE_FONT, size=23, weight="bold")
+        self.font_section = ctk.CTkFont(family=TITLE_FONT, size=16, weight="bold")
+        self.font_body = ctk.CTkFont(family=APP_FONT, size=13)
+        self.font_small = ctk.CTkFont(family=APP_FONT, size=12)
+        self.font_small_bold = ctk.CTkFont(family=APP_FONT, size=12, weight="bold")
+        self.font_label = ctk.CTkFont(family=APP_FONT, size=12, weight="bold")
+        self.font_log_title = ctk.CTkFont(family=TITLE_FONT, size=14, weight="bold")
+        self.font_mono = ctk.CTkFont(family=MONO_FONT, size=12)
 
         # Cada operador tem a sua própria base.
         self.pm_base = BeliefBase()
@@ -104,10 +92,11 @@ class BeliefApp(AppActions, ctk.CTk):
         tabs = ctk.CTkTabview(
             self,
             fg_color=COLORS["bg_main"],
-            segmented_button_selected_color=COLORS["primary"],
-            segmented_button_selected_hover_color=COLORS["primary_light"],
-            segmented_button_unselected_color="#ffffff",
-            segmented_button_unselected_hover_color="#e5e7eb",
+            segmented_button_fg_color=COLORS["tab"],
+            segmented_button_selected_color=COLORS["tab_selected"],
+            segmented_button_selected_hover_color=COLORS["tab_selected_hover"],
+            segmented_button_unselected_color=COLORS["tab"],
+            segmented_button_unselected_hover_color=COLORS["tab_hover"],
             text_color=COLORS["text"],
         )
         tabs.grid(row=1, column=0, sticky="nsew", padx=20, pady=(4, 14))

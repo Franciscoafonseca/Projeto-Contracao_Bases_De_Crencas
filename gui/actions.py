@@ -20,6 +20,7 @@ from logica import (
     selecionar_remainders,
 )
 
+import re
 from logica.contractions.exhaustive import (
     partial_meet_all_selection_options,
     kernel_all_incision_options,
@@ -149,9 +150,56 @@ class AppActions:
     def _get_kernel_target_formula(self) -> str:
         return self._get_target_formula_from(self.entry_kernel_target)
 
-    # ============================================================
+        # ============================================================
+
     # LOGS
     # ============================================================
+
+    def _configure_log_tags(self, textbox) -> None:
+        # Nota:
+        # CTkTextbox não permite usar "font" em tag_config.
+        # Por isso o destaque é feito com cores, símbolos e espaçamento.
+        textbox.tag_config(
+            "log_main_title",
+            foreground=COLORS["text"],
+        )
+        textbox.tag_config(
+            "log_title",
+            foreground=COLORS["text"],
+        )
+        textbox.tag_config(
+            "log_text",
+            foreground=COLORS["text"],
+        )
+        textbox.tag_config(
+            "log_muted",
+            foreground=COLORS["muted"],
+        )
+        textbox.tag_config(
+            "log_success",
+            foreground=COLORS["success"],
+        )
+        textbox.tag_config(
+            "log_warning",
+            foreground=COLORS["warning"],
+        )
+        textbox.tag_config(
+            "log_error",
+            foreground=COLORS["danger"],
+        )
+        textbox.tag_config(
+            "log_sep",
+            foreground=COLORS["border"],
+        )
+
+    def _ensure_log_tags(self, attr_name: str, textbox) -> None:
+        flag_name = f"_{attr_name}_tags_configured"
+
+        if getattr(self, flag_name, False):
+            return
+
+        self._configure_log_tags(textbox)
+        setattr(self, flag_name, True)
 
     def _write_to_log(self, attr_name: str, msg: str) -> None:
         textbox = getattr(self, attr_name, None)
@@ -159,15 +207,93 @@ class AppActions:
         if textbox is None:
             return
 
+        self._ensure_log_tags(attr_name, textbox)
+
         text = str(msg)
 
         if text == "":
-            textbox.insert("end", "\n")
+            textbox.insert("end", "\n", "log_text")
             textbox.see("end")
             return
 
-        for line in text.splitlines():
-            textbox.insert("end", line + "\n")
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+
+            if not line:
+                textbox.insert("end", "\n", "log_text")
+                continue
+
+            if set(line) <= {"━", "─", "-", "="}:
+                textbox.insert(
+                    "end",
+                    "────────────────────────────────────────\n",
+                    "log_sep",
+                )
+                continue
+
+            if line.startswith("===") and line.endswith("==="):
+                clean = line.strip("= ").strip()
+                textbox.insert("end", "\n", "log_text")
+                textbox.insert("end", f"▣ {clean}\n", "log_main_title")
+                continue
+
+            is_numbered_title = re.match(r"^\d+\.\s+", line) is not None
+
+            is_title = (
+                is_numbered_title
+                or line.endswith(":")
+                or line.startswith(
+                    (
+                        "Antes:",
+                        "Depois:",
+                        "Base inicial",
+                        "Base final",
+                        "Fórmula alvo",
+                        "Estratégia",
+                        "Remainders",
+                        "Kernels",
+                        "Fórmulas escolhidas",
+                        "Resultado",
+                        "Exploração",
+                        "Opção",
+                    )
+                )
+            )
+
+            lower = line.lower()
+
+            if lower.startswith(("erro", "✗", "não foi possível")):
+                clean = line.lstrip("✗ ").strip()
+                textbox.insert("end", "✕ ", "log_error")
+                textbox.insert("end", clean + "\n", "log_error")
+
+            elif lower.startswith(("aviso", "atenção")):
+                textbox.insert("end", "⚠ ", "log_warning")
+                textbox.insert("end", line + "\n", "log_warning")
+
+            elif lower.startswith(
+                (
+                    "✓",
+                    "adicionada",
+                    "removida",
+                    "base guardada",
+                    "base carregada",
+                    "pdf exportado",
+                    "resultados limpos",
+                    "base partial meet limpa",
+                    "base kernel limpa",
+                )
+            ):
+                clean = line.lstrip("✓ ").strip()
+                textbox.insert("end", "✓ ", "log_success")
+                textbox.insert("end", clean + "\n", "log_success")
+
+            elif is_title:
+                textbox.insert("end", "▸ ", "log_title")
+                textbox.insert("end", line + "\n", "log_title")
+
+            else:
+                textbox.insert("end", "  " + line + "\n", "log_text")
 
         textbox.see("end")
 
@@ -209,11 +335,16 @@ class AppActions:
         text_base = getattr(self, f"{kind}_text_base")
         label_selected = getattr(self, f"{kind}_label_selected")
         btn_remove = getattr(self, f"{kind}_btn_remove")
+        label_prefix = getattr(self, f"{kind}_label_selected_prefix", None)
 
         text_base.tag_remove("selected_line", "1.0", "end")
         setattr(self, f"{kind}_selected_index", None)
 
         btn_remove.configure(state="disabled")
+
+        if label_prefix is not None:
+            label_prefix.configure(text="")
+
         label_selected.configure(
             text="Nenhuma fórmula selecionada",
             text_color=COLORS["muted"],
@@ -237,12 +368,25 @@ class AppActions:
             btn_remove.configure(state="normal")
 
             formula = base.formulas[idx]
-            shown = self._ellipsis(f"Selecionada #{line}: {formula}")
+            label_prefix = getattr(self, f"{kind}_label_selected_prefix", None)
 
-            label_selected.configure(
-                text=shown,
-                text_color=COLORS["text"],
-            )
+            if label_prefix is not None:
+                label_prefix.configure(
+                    text=f"Selecionada #{line}: ",
+                    text_color=(
+                        COLORS["pm_dark"] if kind == "pm" else COLORS["kernel_dark"]
+                    ),
+                )
+                label_selected.configure(
+                    text=self._ellipsis(formula, max_chars=42),
+                    text_color=COLORS["text"],
+                )
+            else:
+                shown = self._ellipsis(f"Selecionada #{line}: {formula}")
+                label_selected.configure(
+                    text=shown,
+                    text_color=COLORS["text"],
+                )
         else:
             self._clear_operator_selection(kind)
 
@@ -646,10 +790,8 @@ class AppActions:
         mapping = {
             "Comum se existir": "common_first",
             "Primeira por kernel": "first_each",
-            "Incisão mínima": "min_hitting",
             "Manual": "manual",
             "Todas as incisões válidas": "all_incisions",
-            "Todas as incisões mínimas": "all_minimal_incisions",
         }
 
         return mapping.get(self.kernel_strategy.get(), "common_first")
@@ -659,10 +801,6 @@ class AppActions:
 
         if estrategia == "all_incisions":
             self._show_all_kernel_incision_options(minimal_only=False)
-            return
-
-        if estrategia == "all_minimal_incisions":
-            self._show_all_kernel_incision_options(minimal_only=True)
             return
 
         self._contract_kernel()

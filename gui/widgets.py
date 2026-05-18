@@ -21,7 +21,7 @@ def make_log_card(parent) -> ctk.CTkFrame:
         fg_color=COLORS["log"],
         corner_radius=18,
         border_width=1,
-        border_color=COLORS["log_border"],
+        border_color=COLORS["border"],
     )
 
 
@@ -31,18 +31,15 @@ def section_title(
     font,
     color_key: str = "accent",
 ) -> ctk.CTkFrame:
-    frame = ctk.CTkFrame(
-        parent,
-        fg_color="transparent",
-        height=26,
-    )
+    frame = ctk.CTkFrame(parent, fg_color="transparent", height=28)
     frame.grid_propagate(False)
     frame.pack_propagate(False)
+    frame.grid_columnconfigure(1, weight=1)
 
     bar = ctk.CTkFrame(
         frame,
-        width=5,
-        height=20,
+        width=4,
+        height=22,
         fg_color=COLORS.get(color_key, COLORS["accent"]),
         corner_radius=99,
     )
@@ -53,82 +50,166 @@ def section_title(
         text=text,
         font=font,
         text_color=COLORS["text"],
-        height=24,
+        anchor="w",
+        height=26,
     )
     label.grid(row=0, column=1, sticky="w")
 
     return frame
 
 
-def solid_button(
+_BUTTON_STYLES = {
+    "neutral": {
+        "fg": COLORS["primary"],
+        "hover": COLORS["primary_hover"],
+        "soft": COLORS["primary_soft"],
+        "soft_hover": COLORS["primary_soft_hover"],
+        "border": COLORS["primary"],
+        "text": COLORS["primary"],
+    },
+    "pm": {
+        "fg": COLORS["pm"],
+        "hover": COLORS["pm_hover"],
+        "soft": COLORS["pm_soft"],
+        "soft_hover": COLORS["pm_soft_hover"],
+        "border": COLORS["pm"],
+        "text": COLORS["pm"],
+    },
+    "kernel": {
+        "fg": COLORS["kernel"],
+        "hover": COLORS["kernel_hover"],
+        "soft": COLORS["kernel_soft"],
+        "soft_hover": COLORS["kernel_soft_hover"],
+        "border": COLORS["kernel"],
+        "text": COLORS["kernel"],
+    },
+    "success": {
+        "fg": COLORS["success"],
+        "hover": COLORS["success_hover"],
+        "soft": COLORS["success_soft"],
+        "soft_hover": COLORS["success_soft"],
+        "border": COLORS["success"],
+        "text": COLORS["success"],
+    },
+    "danger": {
+        "fg": COLORS["danger"],
+        "hover": COLORS["danger_hover"],
+        "soft": COLORS["danger_soft"],
+        "soft_hover": COLORS["danger_soft_hover"],
+        "border": COLORS["danger"],
+        "text": COLORS["danger"],
+    },
+    "export": {
+        "fg": COLORS["export"],
+        "hover": COLORS["export_hover"],
+        "soft": COLORS["export_soft"],
+        "soft_hover": COLORS["export_soft_hover"],
+        "border": COLORS["export"],
+        "text": COLORS["export"],
+    },
+}
+
+
+def action_button(
     parent,
     text: str,
     command,
     font,
-    color_key: str,
+    variant: str = "neutral",
+    outline: bool = False,
+    height: int = 38,
 ) -> ctk.CTkButton:
+    style = _BUTTON_STYLES.get(variant, _BUTTON_STYLES["neutral"])
+
+    if outline:
+        return ctk.CTkButton(
+            parent,
+            text=text,
+            command=command,
+            height=height,
+            corner_radius=13,
+            fg_color="transparent",
+            hover_color=style["soft_hover"],
+            border_width=1,
+            border_color=style["border"],
+            text_color=style["text"],
+            font=font,
+        )
+
     return ctk.CTkButton(
         parent,
         text=text,
         command=command,
-        height=36,
-        corner_radius=12,
-        fg_color=COLORS[color_key],
-        hover_color=COLORS.get(f"{color_key}_light", COLORS[color_key]),
+        height=height,
+        corner_radius=13,
+        fg_color=style["fg"],
+        hover_color=style["hover"],
         text_color="white",
         font=font,
     )
 
 
-def outline_button(
+def primary_button(parent, text: str, command, font) -> ctk.CTkButton:
+    return action_button(parent, text, command, font, variant="neutral")
+
+
+def secondary_button(
     parent,
     text: str,
     command,
     font,
-    color_key: str,
+    variant: str = "neutral",
 ) -> ctk.CTkButton:
-    return ctk.CTkButton(
+    return action_button(
         parent,
-        text=text,
-        command=command,
-        height=36,
-        corner_radius=12,
-        fg_color="transparent",
-        hover_color=COLORS.get(f"{color_key}_soft", "#e5e7eb"),
-        border_width=1,
-        border_color=COLORS[color_key],
-        text_color=COLORS[color_key],
-        font=font,
+        text,
+        command,
+        font,
+        variant=variant,
+        outline=True,
     )
 
 
-def primary_button(parent, text: str, command, font) -> ctk.CTkButton:
-    return solid_button(parent, text, command, font, "primary")
-
-
-def secondary_button(parent, text: str, command, font) -> ctk.CTkButton:
-    return outline_button(parent, text, command, font, "info")
+def success_button(parent, text: str, command, font) -> ctk.CTkButton:
+    return action_button(parent, text, command, font, variant="success")
 
 
 def danger_button(parent, text: str, command, font) -> ctk.CTkButton:
-    return outline_button(parent, text, command, font, "danger")
-
-
-def success_button(parent, text: str, command, font) -> ctk.CTkButton:
-    return solid_button(parent, text, command, font, "success")
+    return action_button(parent, text, command, font, variant="danger", outline=True)
 
 
 def pm_button(parent, text: str, command, font) -> ctk.CTkButton:
-    return solid_button(parent, text, command, font, "pm")
+    return action_button(parent, text, command, font, variant="pm")
+
+
+def pm_outline_button(parent, text: str, command, font) -> ctk.CTkButton:
+    return action_button(parent, text, command, font, variant="pm", outline=True)
 
 
 def kernel_button(parent, text: str, command, font) -> ctk.CTkButton:
-    return solid_button(parent, text, command, font, "kernel")
+    return action_button(parent, text, command, font, variant="kernel")
 
 
-def explore_button(parent, text: str, command, font) -> ctk.CTkButton:
-    return solid_button(parent, text, command, font, "warning")
+def kernel_outline_button(parent, text: str, command, font) -> ctk.CTkButton:
+    return action_button(parent, text, command, font, variant="kernel", outline=True)
+
+
+def explore_button(
+    parent,
+    text: str,
+    command,
+    font,
+    variant: str = "neutral",
+) -> ctk.CTkButton:
+    return action_button(
+        parent,
+        text,
+        command,
+        font,
+        variant=variant,
+        outline=True,
+    )
 
 
 def export_button(parent, text: str, command, font) -> ctk.CTkButton:
-    return solid_button(parent, text, command, font, "export")
+    return action_button(parent, text, command, font, variant="export", outline=True)
