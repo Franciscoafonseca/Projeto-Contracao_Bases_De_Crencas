@@ -1,30 +1,19 @@
-# logica/__init__.py
+# logica/contractions/__init__.py
 
-from .belief_base import BeliefBase
-
-from .cp_logic import (
-    ParseError,
-    Formula,
-    Var,
-    Neg,
-    And,
-    Or,
-    Imp,
-    Iff,
-    parse_formula,
-    is_cp_formula,
-    is_tautology,
-    is_contradiction,
-    conseqlog_strings,
-)
-
-from .contractions.common import (
+from .common import (
+    normalizar_formula,
     e_subconjunto,
     conjunto_das_partes,
     implica,
+    intersecao_de_conjuntos,
+    format_base_text,
+    format_set_text,
+    format_set_of_sets_text,
 )
 
-from .contractions.partial_meet import (
+from .partial_meet import (
+    conjuntos_que_nao_implicam,
+    maximais_por_inclusao,
     remainders,
     selecionar_remainders,
     partial_meet_contraction,
@@ -32,15 +21,19 @@ from .contractions.partial_meet import (
     partial_meet_contraction_manual_with_steps,
 )
 
-from .contractions.kernel import (
+from .kernel import (
+    conjuntos_que_implicam,
+    minimais_por_inclusao,
     kernels,
+    hitting_set_valido,
+    incisao_minima,
     incisao,
     kernel_contraction,
     kernel_contraction_with_steps,
     kernel_contraction_manual_with_steps,
 )
 
-from .contractions.exhaustive import (
+from .exhaustive import (
     partial_meet_all_selection_options,
     kernel_all_incision_options,
 )
