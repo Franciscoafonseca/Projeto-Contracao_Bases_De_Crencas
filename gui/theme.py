@@ -80,6 +80,19 @@ COLORS = {
     "export_hover": "#115e59",
     "export_soft": "#f0fdfa",
     "export_soft_hover": "#ccfbf1",
+    # Ações neutras iguais em Partial Meet e Kernel
+    "neutral": "#0f172a",
+    "neutral_hover": "#1e293b",
+    "neutral_dark": "#020617",
+    "neutral_soft": "#f1f5f9",
+    "neutral_soft_hover": "#e2e8f0",
+    "neutral_border": "#cbd5e1",
+    "neutral_text": "#0f172a",
+    # Menu da função de seleção/incisão
+    "choice": "#334155",
+    "choice_hover": "#1f2937",
+    "choice_button": "#0f172a",
+    "choice_button_hover": "#020617",
 }
 
 MAX_SAFE_FORMULAS = 12

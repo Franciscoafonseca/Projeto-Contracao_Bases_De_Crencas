@@ -12,6 +12,9 @@ from .widgets import (
     kernel_button,
     kernel_outline_button,
     export_button,
+    style_choice_menu,
+    style_neutral_button,
+    style_soft_button,
 )
 
 
@@ -134,21 +137,25 @@ def build_tab_kernel(app, parent: ctk.CTkFrame) -> None:
     file_buttons.grid_propagate(False)
     file_buttons.grid_columnconfigure((0, 1), weight=1)
 
-    secondary_button(
+    app.kernel_btn_save = secondary_button(
         file_buttons,
         "Guardar base",
         lambda: app._save_base_to_file("kernel"),
         app.font_small,
         variant="kernel",
-    ).grid(row=0, column=0, sticky="ew", padx=(0, 5))
+    )
+    style_neutral_button(app.kernel_btn_save)
+    app.kernel_btn_save.grid(row=0, column=0, sticky="ew", padx=(0, 5))
 
-    secondary_button(
+    app.kernel_btn_load = secondary_button(
         file_buttons,
         "Carregar base",
         lambda: app._load_base_from_file("kernel"),
         app.font_small,
         variant="kernel",
-    ).grid(row=0, column=1, sticky="ew", padx=(5, 0))
+    )
+    style_neutral_button(app.kernel_btn_load)
+    app.kernel_btn_load.grid(row=0, column=1, sticky="ew", padx=(5, 0))
 
     app.kernel_text_base = ctk.CTkTextbox(
         base_card,
@@ -219,15 +226,18 @@ def build_tab_kernel(app, parent: ctk.CTkFrame) -> None:
         app.font_small,
         variant="kernel",
     )
+    style_neutral_button(app.kernel_btn_remove)
     app.kernel_btn_remove.grid(row=1, column=0, sticky="ew", padx=(0, 5))
     app.kernel_btn_remove.configure(state="disabled")
 
-    danger_button(
+    app.kernel_btn_clear_base = danger_button(
         bottom,
         "Limpar",
         lambda: app._clear_base_for("kernel"),
         app.font_small,
-    ).grid(row=1, column=1, sticky="ew", padx=(5, 0))
+    )
+    style_neutral_button(app.kernel_btn_clear_base)
+    app.kernel_btn_clear_base.grid(row=1, column=1, sticky="ew", padx=(5, 0))
 
     # ============================================================
     # OPERAÇÃO KERNEL
@@ -295,6 +305,8 @@ def build_tab_kernel(app, parent: ctk.CTkFrame) -> None:
         dropdown_hover_color=COLORS["kernel_soft"],
         text_color="white",
     )
+
+    style_choice_menu(app.combo_kernel_strategy, "kernel")
     app.combo_kernel_strategy.grid(
         row=4,
         column=0,
@@ -371,13 +383,15 @@ def build_tab_kernel(app, parent: ctk.CTkFrame) -> None:
         color_key="kernel",
     ).grid(row=0, column=0, sticky="w", padx=12, pady=8)
 
-    secondary_button(
+    app.kernel_btn_clear_log = secondary_button(
         result_header,
         "Limpar",
         app._clear_kernel_log,
         app.font_small,
         variant="kernel",
-    ).grid(row=0, column=1, sticky="e", padx=8, pady=6)
+    )
+    style_soft_button(app.kernel_btn_clear_log)
+    app.kernel_btn_clear_log.grid(row=0, column=1, sticky="e", padx=8, pady=6)
 
     app.text_kernel_log = ctk.CTkTextbox(
         result_card,
@@ -397,12 +411,14 @@ def build_tab_kernel(app, parent: ctk.CTkFrame) -> None:
     result_footer.grid_propagate(False)
     result_footer.grid_columnconfigure(0, weight=1)
 
-    export_button(
+    app.kernel_btn_export_pdf = export_button(
         result_footer,
         "Guardar último relatório em PDF",
         lambda: app._export_last_operation_pdf("Kernel"),
         app.font_small,
-    ).grid(row=0, column=0, sticky="ew")
+    )
+    style_soft_button(app.kernel_btn_export_pdf)
+    app.kernel_btn_export_pdf.grid(row=0, column=0, sticky="ew")
 
     app._kernel_log("Kernel pronto.")
     app._kernel_log("Cria uma base nesta aba, escolhe α e executa a opção.")

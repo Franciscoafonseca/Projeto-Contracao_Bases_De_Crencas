@@ -12,6 +12,9 @@ from .widgets import (
     pm_button,
     pm_outline_button,
     export_button,
+    style_choice_menu,
+    style_neutral_button,
+    style_soft_button,
 )
 
 
@@ -134,21 +137,25 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
     file_buttons.grid_propagate(False)
     file_buttons.grid_columnconfigure((0, 1), weight=1)
 
-    secondary_button(
+    app.pm_btn_save = secondary_button(
         file_buttons,
         "Guardar base",
         lambda: app._save_base_to_file("pm"),
         app.font_small,
         variant="pm",
-    ).grid(row=0, column=0, sticky="ew", padx=(0, 5))
+    )
+    style_neutral_button(app.pm_btn_save)
+    app.pm_btn_save.grid(row=0, column=0, sticky="ew", padx=(0, 5))
 
-    secondary_button(
+    app.pm_btn_load = secondary_button(
         file_buttons,
         "Carregar base",
         lambda: app._load_base_from_file("pm"),
         app.font_small,
         variant="pm",
-    ).grid(row=0, column=1, sticky="ew", padx=(5, 0))
+    )
+    style_neutral_button(app.pm_btn_load)
+    app.pm_btn_load.grid(row=0, column=1, sticky="ew", padx=(5, 0))
 
     app.pm_text_base = ctk.CTkTextbox(
         base_card,
@@ -219,15 +226,18 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
         app.font_small,
         variant="pm",
     )
+    style_neutral_button(app.pm_btn_remove)
     app.pm_btn_remove.grid(row=1, column=0, sticky="ew", padx=(0, 5))
     app.pm_btn_remove.configure(state="disabled")
 
-    danger_button(
+    app.pm_btn_clear_base = danger_button(
         bottom,
         "Limpar",
         lambda: app._clear_base_for("pm"),
         app.font_small,
-    ).grid(row=1, column=1, sticky="ew", padx=(5, 0))
+    )
+    style_neutral_button(app.pm_btn_clear_base)
+    app.pm_btn_clear_base.grid(row=1, column=1, sticky="ew", padx=(5, 0))
 
     # ============================================================
     # OPERAÇÃO PARTIAL MEET
@@ -296,6 +306,7 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
         dropdown_hover_color=COLORS["pm_soft"],
         text_color="white",
     )
+    style_choice_menu(app.combo_pm_strategy, "pm")
     app.combo_pm_strategy.grid(row=4, column=0, sticky="ew", padx=16, pady=(0, 14))
 
     pm_outline_button(
@@ -366,13 +377,15 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
         color_key="pm",
     ).grid(row=0, column=0, sticky="w", padx=12, pady=8)
 
-    secondary_button(
+    app.pm_btn_clear_log = secondary_button(
         result_header,
         "Limpar",
         app._clear_pm_log,
         app.font_small,
         variant="pm",
-    ).grid(row=0, column=1, sticky="e", padx=8, pady=6)
+    )
+    style_soft_button(app.pm_btn_clear_log)
+    app.pm_btn_clear_log.grid(row=0, column=1, sticky="e", padx=8, pady=6)
 
     app.text_pm_log = ctk.CTkTextbox(
         result_card,
@@ -392,12 +405,14 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
     result_footer.grid_propagate(False)
     result_footer.grid_columnconfigure(0, weight=1)
 
-    export_button(
+    app.pm_btn_export_pdf = export_button(
         result_footer,
         "Guardar último relatório em PDF",
         lambda: app._export_last_operation_pdf("Partial Meet"),
         app.font_small,
-    ).grid(row=0, column=0, sticky="ew")
+    )
+    style_soft_button(app.pm_btn_export_pdf)
+    app.pm_btn_export_pdf.grid(row=0, column=0, sticky="ew")
 
     app._pm_log("Partial Meet pronto.")
     app._pm_log("Cria uma base nesta aba, escolhe α e executa a opção.")

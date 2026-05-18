@@ -213,3 +213,43 @@ def explore_button(
 
 def export_button(parent, text: str, command, font) -> ctk.CTkButton:
     return action_button(parent, text, command, font, variant="export", outline=True)
+
+
+def style_choice_menu(menu, variant: str) -> None:
+    if variant == "pm":
+        fg = "#991b1b"
+        hover = "#7f1d1d"
+        soft = "#fee2e2"
+    else:
+        fg = "#14532d"
+        hover = "#166534"
+        soft = "#dcfce7"
+
+    menu.configure(
+        fg_color=fg,
+        button_color=hover,
+        button_hover_color=fg,
+        dropdown_fg_color="#ffffff",
+        dropdown_hover_color=soft,
+        dropdown_text_color="#111827",
+        text_color="#ffffff",
+    )
+
+
+def style_neutral_button(button) -> None:
+    button.configure(
+        fg_color="#1f2937",
+        hover_color="#374151",
+        text_color="#ffffff",
+        border_width=0,
+    )
+
+
+def style_soft_button(button) -> None:
+    button.configure(
+        fg_color="#e5e7eb",
+        hover_color="#d1d5db",
+        text_color="#111827",
+        border_color="#cbd5e1",
+        border_width=1,
+    )

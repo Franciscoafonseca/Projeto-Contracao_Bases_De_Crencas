@@ -237,6 +237,8 @@ class AppActions:
                 textbox.insert("end", f"▣ {clean}\n", "log_main_title")
                 continue
 
+            lower = line.lower()
+
             is_numbered_title = re.match(r"^\d+\.\s+", line) is not None
 
             is_title = (
@@ -256,11 +258,10 @@ class AppActions:
                         "Resultado",
                         "Exploração",
                         "Opção",
+                        "Diagnóstico visual",
                     )
                 )
             )
-
-            lower = line.lower()
 
             if lower.startswith(("erro", "✗", "não foi possível")):
                 clean = line.lstrip("✗ ").strip()
@@ -270,6 +271,14 @@ class AppActions:
             elif lower.startswith(("aviso", "atenção")):
                 textbox.insert("end", "⚠ ", "log_warning")
                 textbox.insert("end", line + "\n", "log_warning")
+
+            elif lower.startswith(("mantidas:", "preservadas:")):
+                textbox.insert("end", "✓ ", "log_success")
+                textbox.insert("end", line + "\n", "log_success")
+
+            elif lower.startswith(("removidas:", "retiradas:")):
+                textbox.insert("end", "✕ ", "log_error")
+                textbox.insert("end", line + "\n", "log_error")
 
             elif lower.startswith(
                 (
@@ -694,6 +703,7 @@ class AppActions:
         self._pm_log("")
         self._pm_log(f"Antes:  {self._format_base(before)}")
         self._pm_log(f"Depois: {self._format_base(after)}")
+        self._log_visual_contraction("pm", before, after)
         self._pm_log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
         self.last_operation = {
@@ -780,6 +790,17 @@ class AppActions:
             "before": before,
             "after": before,
             "steps": display_steps,
+            "remainders": rems,
+            "all_options": [
+                {
+                    "option_id": option.option_id,
+                    "selected_indices": option.selected_indices,
+                    "selected_remainders": option.selected_remainders,
+                    "removed_formulas": option.removed_formulas,
+                    "result_base": option.result_base,
+                }
+                for option in options
+            ],
         }
 
     # ============================================================
@@ -913,6 +934,7 @@ class AppActions:
         self._kernel_log("")
         self._kernel_log(f"Antes:  {self._format_base(before)}")
         self._kernel_log(f"Depois: {self._format_base(after)}")
+        self._log_visual_contraction("kernel", before, after)
         self._kernel_log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
         self.last_operation = {
@@ -1007,11 +1029,39 @@ class AppActions:
             "before": before,
             "after": before,
             "steps": display_steps,
+            "kernels": kerns,
+            "all_options": [
+                {
+                    "option_id": option.option_id,
+                    "incision": option.incision,
+                    "removed_formulas": option.removed_formulas,
+                    "result_base": option.result_base,
+                    "is_minimal": option.is_minimal,
+                }
+                for option in options
+            ],
         }
 
     # ============================================================
     # CÁLCULO PROPOSICIONAL
     # ============================================================
+
+    def _log_visual_contraction(
+        self, kind: str, before: list[str], after: list[str]
+    ) -> None:
+        """Escreve no log uma leitura visual simples da contração.
+
+        kind deve ser "pm" ou "kernel".
+        """
+        log = self._pm_log if kind == "pm" else self._kernel_log
+
+        removed = [formula for formula in before if formula not in after]
+        kept = [formula for formula in before if formula in after]
+
+        log("")
+        log("Diagnóstico visual da contração:")
+        log("Mantidas: " + ("; ".join(kept) if kept else "(nenhuma)"))
+        log("Removidas: " + ("; ".join(removed) if removed else "(nenhuma)"))
 
     def _test_cp_formula(self) -> None:
         formula = normalize_formula_text(self.entry_cp_formula.get())
