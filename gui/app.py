@@ -28,8 +28,8 @@ class BeliefApp(AppActions, ctk.CTk):
 
         self.last_operation = None
 
-        self.geometry("1240x680")
-        self.minsize(1240, 680)
+        self.geometry("1340x700")
+        self.minsize(1340, 700)
 
         self.font_title = ctk.CTkFont(family=TITLE_FONT, size=23, weight="bold")
         self.font_section = ctk.CTkFont(family=TITLE_FONT, size=16, weight="bold")
