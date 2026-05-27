@@ -10,13 +10,18 @@ from .cp_tab import build_tab_cp
 from .partial_meet_tab import build_tab_partial_meet
 from .kernel_tab import build_tab_kernel
 from .actions import AppActions
-
+from pathlib import Path
+import sys
 
 class BeliefApp(AppActions, ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        try:
+        def resource_path(relative_path: str) -> str:
+            if hasattr(sys, "_MEIPASS"):
+                return str(Path(sys._MEIPASS) / relative_path)
+            return str(Path(__file__).resolve().parent.parent / relative_path)
+        try:    
             self.iconbitmap(resource_path("favicon.ico"))
         except Exception:
             pass
