@@ -2016,7 +2016,7 @@ def _steps_section(
 
     steps = _steps(operation)
     story: list[Any] = []
-    story.extend(_section_title("3. Registo da execução", styles, palette))
+    story.extend(_section_title("2. Registo da execução", styles, palette))
 
     if not steps:
         story.append(
@@ -2101,6 +2101,245 @@ def _steps_section(
     story.append(Spacer(1, 0.35 * cm))
     return story
 
+
+
+# ============================================================
+# SECÇÕES COMPACTAS PARA "TODAS AS POSSIBILIDADES"
+# ============================================================
+
+
+def _unique_option_result_bases(
+    options: Sequence[dict[str, Any]],
+) -> list[tuple[str, list[str]]]:
+    """Devolve bases finais distintas geradas pela exploração.
+
+    A exploração de todas as possibilidades pode produzir várias opções com
+    exatamente a mesma base resultante. Para a capa compacta interessa mostrar
+    os resultados possíveis sem repetir bases iguais.
+    """
+    seen: set[tuple[str, ...]] = set()
+    results: list[tuple[str, list[str]]] = []
+    for idx, option in enumerate(options, start=1):
+        base = _option_result_base(option)
+        key = tuple(base)
+        if key in seen:
+            continue
+        seen.add(key)
+        label = f"#{_option_id(option, idx)}"
+        results.append((label, base))
+    return results
+
+
+def _format_result_bases_for_box(
+    options: Sequence[dict[str, Any]], *, max_bases: int = 18, max_formulas: int = 10
+) -> list[str]:
+    """Formata bases finais distintas para aparecerem como linhas no PDF."""
+    formatted: list[str] = []
+    unique_results = _unique_option_result_bases(options)
+    for label, base in unique_results[:max_bases]:
+        base_text = _set_text(base, empty="base vazia", max_items=max_formulas)
+        formatted.append(f"{label}: {{{base_text}}}")
+
+    hidden = len(unique_results) - max_bases
+    if hidden > 0:
+        formatted.append(f"... e mais {hidden} resultado(s) distinto(s)")
+    return formatted
+
+
+def _all_options_core_structures(
+    operation: dict[str, Any]
+) -> tuple[str, list[str], str, list[str]]:
+    """Seleciona os blocos técnicos que devem aparecer na capa compacta."""
+    key = _operator_key(operation)
+    options = _options(operation)
+
+    if key == "partial meet":
+        structures_title = "Remainders possíveis"
+        structures = _clean_list(operation.get("remainders", []))
+        if not structures:
+            structures = [
+                "Não foram recebidos remainders de forma estruturada; consulta o detalhe das possibilidades."
+            ]
+        results_title = "Resultados possíveis por Partial Meet"
+        results = _format_result_bases_for_box(options)
+        return structures_title, structures, results_title, results
+
+    if key == "kernel":
+        structures_title = "Kernels possíveis"
+        structures = _clean_list(operation.get("kernels", []))
+        if not structures:
+            structures = [
+                "Não foram recebidos kernels de forma estruturada; consulta o detalhe das possibilidades."
+            ]
+        results_title = "Resultados possíveis por Kernel"
+        results = _format_result_bases_for_box(options)
+        return structures_title, structures, results_title, results
+
+    structures_title = "Estruturas calculadas"
+    structures = _clean_list(
+        operation.get("remainders", operation.get("kernels", []))
+    ) or ["Não foram recebidas estruturas de forma estruturada."]
+    results_title = "Resultados possíveis"
+    results = _format_result_bases_for_box(options)
+    return structures_title, structures, results_title, results
+
+
+def _all_options_compact_cover_section(
+    operation: dict[str, Any],
+    palette: dict[str, Any],
+    styles: dict[str, ParagraphStyle],
+) -> list[Any]:
+    """Capa simplificada usada apenas quando o relatório é de todas as opções.
+
+    Nesta modalidade removemos o resumo normal, o mapa fórmula a fórmula, os
+    avisos e a leitura do método aplicado. A primeira página fica focada só nos
+    dados de entrada e no que foi gerado pela exploração.
+    """
+    target = (
+        _normalize_formula(operation.get("target", "Não indicada")) or "Não indicada"
+    )
+    operator = _friendly_operator(operation.get("operator", "Não indicado"))
+    before = _clean_list(operation.get("before", []))
+    options = _options(operation)
+    structures_title, structures, results_title, results = _all_options_core_structures(
+        operation
+    )
+
+    story: list[Any] = [Spacer(1, 0.35 * cm)]
+    story.append(_p(REPORT_TITLE, styles["title"]))
+    story.append(_p(REPORT_SUBTITLE, styles["subtitle"]))
+    story.append(Spacer(1, 0.20 * cm))
+
+    badges = Table(
+        [
+            [
+                _badge(palette["name"], palette, styles, width=4.5 * cm),
+                _badge(
+                    "Exploração de todas as possibilidades",
+                    palette,
+                    styles,
+                    width=7.0 * cm,
+                    secondary=True,
+                ),
+            ]
+        ],
+        colWidths=[5.0 * cm, 7.5 * cm],
+        hAlign="CENTER",
+    )
+    badges.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
+    story.append(badges)
+    story.append(Spacer(1, 0.45 * cm))
+
+    # Nesta versão da capa de "todas as possibilidades" deixamos apenas a
+    # informação essencial pedida: base inicial e fórmula a contrair.
+    # O operador/modo já ficam visíveis nos badges superiores, e a contagem das
+    # opções aparece depois na secção de exploração, evitando repetição.
+    story.append(_formula_box("Base inicial", before, palette, styles, width=16.0 * cm))
+    story.append(Spacer(1, 0.24 * cm))
+
+    intro_rows = [("Fórmula a contrair", target)]
+    story.append(_info_table(intro_rows, palette, styles))
+    story.append(Spacer(1, 0.28 * cm))
+
+    # Mostramos apenas os remainders/kernels possíveis, alinhados à esquerda.
+    # A tabela verde de "Resultados possíveis" foi removida para não repetir
+    # a informação que já aparece no detalhe das possibilidades.
+    structures_box = _formula_box(
+        structures_title,
+        structures,
+        palette,
+        styles,
+        kind="normal",
+        width=7.75 * cm,
+    )
+    structures_table = Table(
+        [[structures_box, ""]],
+        colWidths=[8.0 * cm, 8.0 * cm],
+        hAlign="CENTER",
+    )
+    structures_table.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+    story.append(structures_table)
+    story.append(Spacer(1, 0.18 * cm))
+
+    return story
+
+
+def _methods_explanation_section(
+    operation: dict[str, Any],
+    palette: dict[str, Any],
+    styles: dict[str, ParagraphStyle],
+) -> list[Any]:
+    """Síntese final, sem repetir a síntese verde da exploração."""
+    key = _operator_key(operation)
+    target = _normalize_formula(operation.get("target", "")) or "a fórmula alvo"
+    before = _clean_list(operation.get("before", []))
+    structures_title, structures, results_title, results = _all_options_core_structures(
+        operation
+    )
+    options_count = len(_options(operation))
+
+    if key == "partial meet":
+        method_name = "Partial Meet"
+        structures_name = "remainders"
+        structures_explanation = (
+            "Os remainders são subconjuntos máximos da base inicial que já não implicam a fórmula a contrair. "
+            "Cada possibilidade corresponde a uma seleção γ de remainders, e o resultado final é obtido pela interseção dos remainders selecionados."
+        )
+    elif key == "kernel":
+        method_name = "Kernel"
+        structures_name = "kernels"
+        structures_explanation = (
+            "Os kernels são subconjuntos mínimos da base inicial que ainda implicam a fórmula a contrair. "
+            "Cada possibilidade corresponde a uma incisão σ que remove pelo menos uma fórmula de cada kernel, produzindo uma base final possível."
+        )
+    else:
+        method_name = "Contração"
+        structures_name = "estruturas calculadas"
+        structures_explanation = (
+            "As estruturas calculadas mostram os subconjuntos relevantes usados pelo operador para deixar de sustentar a fórmula a contrair. "
+            "Cada possibilidade representa uma alternativa admissível de contração."
+        )
+
+    base_text = (
+        f"A base inicial contém {len(before)} fórmula(s) e é o ponto de partida da operação."
+        if before
+        else "A base inicial não foi recebida de forma estruturada."
+    )
+    structures_text = (
+        f"Foram apresentados {len(structures)} {structures_name} em '{structures_title}'. "
+        f"{structures_explanation}"
+    )
+    results_text = (
+        f"A secção '{results_title}' resume bases finais distintas geradas no modo de todas as possibilidades. "
+        f"No total, foram geradas {options_count} possibilidade(s), mas o quadro compacto mostra apenas os resultados principais para evitar repetição."
+    )
+
+    synthesis_body = (
+        f"1. Base inicial: {base_text}\n"
+        f"2. Fórmula a contrair: pretende-se contrair {target}, isto é, obter bases finais que deixem de a implicar.\n"
+        f"3. Resultados possíveis: {structures_text} {results_text}"
+    )
+
+    story: list[Any] = [PageBreak()]
+    story.extend(_section_title("Explicação do método", styles, palette))
+    story.append(
+        _p(
+            f"Síntese final da exploração por {method_name}, sem repetir a lista de opções já apresentada no detalhe do relatório.",
+            styles["muted"],
+        )
+    )
+    story.append(Spacer(1, 0.15 * cm))
+    story.append(_callout("Síntese das partes 1, 2 e 3", synthesis_body, palette, styles, tone="info"))
+    story.append(Spacer(1, 0.20 * cm))
+    return story
 
 # ============================================================
 # SECÇÕES PARA "VER TODAS AS OPÇÕES"
@@ -2199,14 +2438,14 @@ def _all_options_intro_text(operation: dict[str, Any]) -> tuple[str, str]:
             f"Foram geradas {options_count} possibilidade(s) de seleção γ para contrair {target}. "
             "Cada possibilidade corresponde a uma forma admissível de escolher remainders; "
             "a base final de cada uma resulta da interseção dos remainders escolhidos. "
-            "Em seguida é apresentada uma síntese e depois o detalhe de cada possibilidade.",
+            "Em seguida é apresentado o detalhe de cada possibilidade.",
         )
 
     return (
         "Leitura da exploração por Kernel",
         f"Foram geradas {options_count} possibilidade(s) de incisão σ para contrair {target}. "
         "Cada possibilidade remove pelo menos uma fórmula de cada kernel relevante. "
-        "A síntese inicial identifica quais incisões são mais conservadoras e quais retiram mais informação.",
+        "Em seguida é apresentado o detalhe de cada possibilidade.",
     )
 
 
@@ -2498,21 +2737,22 @@ def _all_options_section(
 
     key = _operator_key(operation)
     before = _clean_list(operation.get("before", []))
-    story: list[Any] = [PageBreak()]
-    story.extend(_section_title("4. Exploração de todas as opções", styles, palette))
+    # Não forçar nova página aqui: a exploração deve continuar logo após a
+    # primeira secção compacta quando houver espaço disponível.
+    story: list[Any] = []
+    story.extend(_section_title("Exploração de todas as opções", styles, palette))
 
     intro_title, intro_body = _all_options_intro_text(operation)
     story.append(_callout(intro_title, intro_body, palette, styles))
     story.append(Spacer(1, 0.18 * cm))
 
     # Para "todas as opções" mantemos a leitura curta e passamos logo
-    # para a síntese e para o detalhe. Removemos a tabela "Comparação rápida"
-    # e os indicadores extraídos dos logs para evitar repetição visual.
-    story.append(_process_timeline(operation, palette, styles))
-    story.append(Spacer(1, 0.22 * cm))
+    # para o detalhe. A linha visual com os passos 1-4 foi removida porque
+    # a explicação do método fica resumida no fim do relatório.
 
-    title, body = _all_options_final_synthesis(options, operation)
-    story.append(_callout(title, body, palette, styles, tone="success"))
+    # A síntese detalhada com listas muito longas era repetida no fim e ficava visualmente pesada.
+    # Passamos diretamente para o detalhe das possibilidades; a explicação final resume apenas
+    # as partes 1, 2 e 3 do relatório.
     story.append(PageBreak())
 
     story.append(_p("Detalhe das possibilidades", styles["section"]))
@@ -2593,6 +2833,112 @@ def _all_options_section(
 
 
 # ============================================================
+# SECÇÕES SIMPLIFICADAS PARA ESTRATÉGIAS INDIVIDUAIS
+# ============================================================
+
+
+def _normal_header_section(
+    operation: dict[str, Any],
+    palette: dict[str, Any],
+    styles: dict[str, ParagraphStyle],
+) -> list[Any]:
+    """Cabeçalho simples para uma contração individual.
+
+    Para estratégias como manual, primeira por kernel, full meet, etc., o
+    relatório fica mais direto: cabeçalho, resumo da operação, registo da
+    execução e, no fim, a interpretação do método.
+    """
+    story: list[Any] = [Spacer(1, 0.35 * cm)]
+    story.append(_p(REPORT_TITLE, styles["title"]))
+    story.append(_p(REPORT_SUBTITLE, styles["subtitle"]))
+    story.append(Spacer(1, 0.20 * cm))
+
+    badges = Table(
+        [
+            [
+                _badge(palette["name"], palette, styles, width=4.5 * cm),
+                _badge(
+                    "Contração individual",
+                    palette,
+                    styles,
+                    width=7.0 * cm,
+                    secondary=True,
+                ),
+            ]
+        ],
+        colWidths=[5.0 * cm, 7.5 * cm],
+        hAlign="CENTER",
+    )
+    badges.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
+    story.append(badges)
+    story.append(Spacer(1, 0.35 * cm))
+    return story
+
+
+def _normal_operation_summary_section(
+    operation: dict[str, Any],
+    palette: dict[str, Any],
+    styles: dict[str, ParagraphStyle],
+) -> list[Any]:
+    """Resumo compacto da operação, sem mapa fórmula a fórmula nem avisos."""
+    before = _clean_list(operation.get("before", []))
+    after = _clean_list(operation.get("after", []))
+    removed = _removed_formulas(before, after)
+    kept = _kept_formulas(before, after)
+
+    target = (
+        _normalize_formula(operation.get("target", "Não indicada")) or "Não indicada"
+    )
+    operator = _friendly_operator(operation.get("operator", "Não indicado"))
+    strategy = _friendly_strategy(operation.get("strategy", "Não indicada"))
+
+    rows = [
+        ("Operador", operator),
+        ("Estratégia", strategy),
+        ("Fórmula a contrair", target),
+        ("Base inicial", _numbered_list(before, "base vazia", max_items=32)),
+        ("Base final", _numbered_list(after, "base vazia", max_items=32)),
+        ("Fórmulas removidas", _numbered_list(removed, "Nenhuma", max_items=32)),
+        ("Fórmulas preservadas", _numbered_list(kept, "Nenhuma", max_items=32)),
+        ("Gerado em", datetime.now().strftime("%d/%m/%Y %H:%M")),
+    ]
+
+    story: list[Any] = []
+    story.extend(_section_title("1. Resumo da operação", styles, palette))
+    story.append(
+        _p(
+            "Resumo direto da contração: dados de entrada, base final e fórmulas que foram removidas ou preservadas.",
+            styles["muted"],
+        )
+    )
+    story.append(Spacer(1, 0.12 * cm))
+    story.append(_info_table(rows, palette, styles))
+    story.append(Spacer(1, 0.35 * cm))
+    return story
+
+
+def _normal_interpretation_section(
+    operation: dict[str, Any],
+    palette: dict[str, Any],
+    styles: dict[str, ParagraphStyle],
+) -> list[Any]:
+    """Coloca a explicação do método no fim do relatório."""
+    story: list[Any] = []
+    story.extend(_section_title("3. Como interpretar", styles, palette))
+    story.append(
+        _callout(
+            "Como interpretar",
+            _operator_explanation(operation),
+            palette,
+            styles,
+            tone="info",
+        )
+    )
+    story.append(Spacer(1, 0.25 * cm))
+    return story
+
+
+# ============================================================
 # EXPORTADOR PRINCIPAL
 # ============================================================
 
@@ -2638,11 +2984,18 @@ def export_operation_pdf(path: str | Path, operation: dict[str, Any]) -> None:
     )
 
     story: list[Any] = []
-    story.extend(_cover_section(operation, palette, styles))
-    story.extend(_result_section(operation, palette, styles))
-    story.extend(_diagnostic_section(operation, palette, styles))
-    story.extend(_steps_section(operation, palette, styles))
-    story.extend(_all_options_section(operation, palette, styles))
+    if _options(operation):
+        # Modo "todas as possibilidades": relatório compacto no início,
+        # detalhe das possibilidades no meio e explicação dos métodos no fim.
+        story.extend(_all_options_compact_cover_section(operation, palette, styles))
+        story.extend(_all_options_section(operation, palette, styles))
+        story.extend(_methods_explanation_section(operation, palette, styles))
+    else:
+        # Estratégias individuais: manter apenas resumo, registos e interpretação final.
+        story.extend(_normal_header_section(operation, palette, styles))
+        story.extend(_normal_operation_summary_section(operation, palette, styles))
+        story.extend(_steps_section(operation, palette, styles))
+        story.extend(_normal_interpretation_section(operation, palette, styles))
 
     doc.build(
         story, onFirstPage=_page_footer(palette), onLaterPages=_page_footer(palette)
