@@ -33,25 +33,29 @@ ENV/
 # ============================================================
 
 build/
-dist/
+dist/*
+!dist/
+!dist/ProjetoCrencas.exe
+
 *.toc
 *.pyz
 *.pkg
 *.manifest
-*.spec
 base_library.zip
 warn-*.txt
 xref-*.html
 localpycs/
 
+# Manter o ficheiro spec versionado
+!ProjetoCrencas.spec
 
 # ============================================================
-# Executables / installers generated locally
+# Executáveis / instaladores gerados localmente
 # ============================================================
 
 *.exe
+!dist/ProjetoCrencas.exe
 *.msi
-
 
 # ============================================================
 # Logs
