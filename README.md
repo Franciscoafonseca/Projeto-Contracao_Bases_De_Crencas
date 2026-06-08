@@ -1,126 +1,213 @@
-﻿# Projeto de RevisÃ£o de CrenÃ§as
+﻿# Projeto de Contração de Bases de Crenças
 
-## DescriÃ§Ã£o
-Este projeto implementa um sistema de revisÃ£o de crenÃ§as em Python baseado em lÃ³gica proposicional. Permite representar fÃ³rmulas, avaliar consequÃªncia lÃ³gica, testar tautologias e aplicar operadores de contraÃ§Ã£o de crenÃ§as.
+## Descrição
 
-Inclui tambÃ©m interface grÃ¡fica, testes e uma versÃ£o executÃ¡vel.
+Este projeto implementa um sistema de contração de bases de crenças em Python, baseado em lógica proposicional e em conceitos de revisão de crenças.
+
+A aplicação permite representar fórmulas proposicionais, gerir bases de crenças e aplicar operadores clássicos de contração, nomeadamente:
+
+- Partial Meet Contraction
+- Kernel Contraction
+
+O projeto inclui uma interface gráfica moderna, funcionalidades de exploração de possibilidades, registo da execução e exportação de relatórios em PDF.
+
+Também é disponibilizada uma versão executável para Windows, permitindo testar a aplicação sem instalar Python.
+
+---
 
 ## Estrutura do projeto
-- logica/__init__.py - facilita imports dos mÃ³dulos
-- logica/belief_base.py - estrutura da base de crenÃ§as
-- logica/contraction.py - operadores de contraÃ§Ã£o (partial meet e kernel)
-- logica/cp_logic.py - parser, fÃ³rmulas, tautologia e consequÃªncia lÃ³gica
-- main.py - execuÃ§Ã£o em modo texto
-- main_gui.py - interface grÃ¡fica
-- main_partial_meet_test.py - testes
-- dist/ProjetoCrencas/ProjetoCrencas.exe - executÃ¡vel
-- ProjetoCrencas.spec - configuraÃ§Ã£o do PyInstaller
+
+```text
+Projeto-Contracao_Bases_De_Crencas/
+│
+├── export/                  # Exportação de relatórios em PDF
+├── gui/                     # Interface gráfica da aplicação
+├── logica/                  # Implementação da lógica proposicional e operadores
+├── storage/                 # Apoio ao armazenamento/gestão de dados
+│
+├── dist/
+│   └── ProjetoCrencas.exe   # Executável final da aplicação
+│
+├── favicon.ico              # Ícone da aplicação
+├── main_gui.py              # Ponto de entrada da interface gráfica
+├── ProjetoCrencas.spec      # Configuração do PyInstaller
+├── README.md                # Documentação do projeto
+└── .gitignore               # Ficheiros e pastas ignorados pelo Git
+```
+
+---
 
 ## Funcionalidades
-- parsing de fÃ³rmulas proposicionais
-- verificaÃ§Ã£o de fÃ³rmulas vÃ¡lidas
-- cÃ¡lculo de consequÃªncia lÃ³gica
-- teste de tautologias (truth-table e SAT)
-- gestÃ£o de base de crenÃ§as
-- operadores de contraÃ§Ã£o:
-  - partial meet contraction
-  - kernel contraction
 
-## Sintaxe das fÃ³rmulas
+- Interface gráfica para utilização dos operadores de contração.
+- Gestão de bases de crenças.
+- Adição, remoção e limpeza de fórmulas.
+- Parsing de fórmulas proposicionais.
+- Verificação de consequência lógica.
+- Teste de tautologias.
+- Cálculo de remainders para Partial Meet.
+- Cálculo de kernels para Kernel Contraction.
+- Exploração de diferentes possibilidades de contração.
+- Registo detalhado da execução.
+- Exportação de relatórios em PDF.
+- Versão executável para Windows.
+
+---
+
+## Sintaxe das fórmulas
+
+A aplicação trabalha com fórmulas proposicionais escritas em texto.
+
 Exemplos:
-- p
-- neg p
-- (p e q)
-- (p ou q)
-- (p imp q)
-- (p eq q)
 
-Operadores:
-- neg - negaÃ§Ã£o
-- e - conjunÃ§Ã£o
-- ou - disjunÃ§Ã£o
-- imp - implicaÃ§Ã£o
-- eq - equivalÃªncia
+```text
+p
+neg p
+(p e q)
+(p ou q)
+(p imp q)
+(p eq q)
+```
 
-## Tecnologias
-- Python
-- dataclasses
-- typing
-- itertools
-- re
-- PyInstaller
+Operadores disponíveis:
+
+| Operador | Significado  |
+| -------- | ------------ |
+| `neg`    | negação      |
+| `e`      | conjunção    |
+| `ou`     | disjunção    |
+| `imp`    | implicação   |
+| `eq`     | equivalência |
+
+---
 
 ## Como executar
 
-### Executar com Python
-Na pasta do projeto:
-python main.py
+### Opção 1 — Executar a versão compilada
 
-Interface grÃ¡fica:
-python main_gui.py
+A forma mais simples de testar o projeto é executar o ficheiro:
 
-Testes:
-python main_partial_meet_test.py
+```text
+dist/ProjetoCrencas.exe
+```
 
-### Executar versÃ£o compilada
-Ir Ã  pasta dist e executar:
+No Windows, basta abrir a pasta `dist` e clicar duas vezes em:
+
+```text
 ProjetoCrencas.exe
+```
 
-## DependÃªncias
-O projeto usa essencialmente bibliotecas standard do Python.
+---
 
-Se necessÃ¡rio:
-pip install -r requirements.txt
+### Opção 2 — Executar com Python
 
-## Funcionamento
+Na pasta principal do projeto, executar:
 
-### Base de crenÃ§as
-Armazena fÃ³rmulas como strings:
-- p
-- p imp q
-- neg q
+```bash
+python main_gui.py
+```
 
-Permite:
-- adicionar fÃ³rmulas
-- remover fÃ³rmulas
-- listar conteÃºdo
+ou:
 
-### ConsequÃªncia lÃ³gica
-Verifica se premissas implicam uma conclusÃ£o.
+```bash
+py main_gui.py
+```
 
-Exemplo:
-premissas: p imp q, p  
-conclusÃ£o: q  
+---
 
-### Tautologia
-Verifica se uma fÃ³rmula Ã© sempre verdadeira.
+## Dependências
 
-Exemplo:
-(p imp q) eq (neg q imp neg p)
+Para executar a versão em Python, podem ser necessárias as seguintes bibliotecas:
 
-### ContraÃ§Ã£o de crenÃ§as
-Remove fÃ³rmulas da base para deixar de implicar uma dada fÃ³rmula.
+```bash
+pip install customtkinter reportlab pillow
+```
 
-MÃ©todos:
-- partial meet contraction
-- kernel contraction
+Para gerar novamente o executável:
 
-## Exemplo
-Base:
-- p
-- p imp q
-- q imp r
+```bash
+pip install pyinstaller
+```
 
-ContraÃ§Ã£o por r:
-- sistema remove subconjuntos mÃ­nimos
-- devolve nova base que nÃ£o implica r
+---
+
+## Gerar o executável
+
+O executável foi gerado com PyInstaller em modo `onefile`, para que o projeto tenha apenas um ficheiro final em `dist`.
+
+Comando usado:
+
+```bash
+py -m PyInstaller --noconfirm --clean --onefile --windowed --name ProjetoCrencas --icon favicon.ico --collect-all customtkinter main_gui.py
+```
+
+O ficheiro final gerado é:
+
+```text
+dist/ProjetoCrencas.exe
+```
+
+As pastas e ficheiros temporários criados durante a compilação, como `build/`, `__pycache__/`, ficheiros `.toc`, `.pkg`, `.pyz` e outros ficheiros internos do PyInstaller, não fazem parte do projeto final e são ignorados pelo Git.
+
+---
+
+## Operadores implementados
+
+### Partial Meet Contraction
+
+A contração Partial Meet baseia-se na identificação dos subconjuntos máximos da base de crenças que deixam de implicar a fórmula a contrair. A partir desses subconjuntos, é aplicada uma função de seleção para obter a nova base.
+
+### Kernel Contraction
+
+A contração Kernel identifica subconjuntos mínimos da base que implicam a fórmula a contrair. Em seguida, uma função de incisão escolhe fórmulas a remover, garantindo que a base resultante deixa de implicar essa fórmula.
+
+---
+
+## Exemplo de utilização
+
+Base de crenças:
+
+```text
+p
+p imp q
+q imp r
+```
+
+Fórmula a contrair:
+
+```text
+r
+```
+
+O sistema analisa a base, identifica os subconjuntos relevantes e devolve uma nova base que deixa de implicar `r`, de acordo com o operador escolhido.
+
+---
+
+## Tecnologias utilizadas
+
+- Python
+- CustomTkinter
+- ReportLab
+- Pillow
+- PyInstaller
+- Lógica proposicional
+- Algoritmos de contração de crenças
+
+---
 
 ## Objetivo
-Aplicar conceitos de:
-- lÃ³gica proposicional
-- representaÃ§Ã£o de conhecimento
-- revisÃ£o de crenÃ§as
-- algoritmos de decisÃ£o
 
-## ConclusÃ£o
-O projeto demonstra a implementaÃ§Ã£o prÃ¡tica de revisÃ£o de crenÃ§as, permitindo manipular fÃ³rmulas, verificar implicaÃ§Ãµes e aplicar operadores clÃ¡ssicos sobre bases de conhecimento.****
+O objetivo do projeto é aplicar, de forma prática e visual, conceitos de:
+
+- lógica proposicional;
+- representação de conhecimento;
+- revisão e contração de crenças;
+- bases de crenças;
+- algoritmos de decisão;
+- operadores Partial Meet e Kernel.
+
+---
+
+## Conclusão
+
+Este projeto demonstra a implementação prática de operadores de contração de bases de crenças, permitindo manipular fórmulas proposicionais, verificar consequências lógicas e aplicar métodos clássicos da área de revisão de crenças através de uma interface gráfica simples e funcional.

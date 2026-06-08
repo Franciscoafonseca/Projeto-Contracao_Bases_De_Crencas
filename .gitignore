@@ -12,7 +12,6 @@ env/
 # PyInstaller / build outputs
 build/
 ProjetoCrencas/
-localpycs/
 *.toc
 *.pyz
 *.pkg
@@ -20,12 +19,13 @@ localpycs/
 base_library.zip
 warn-*.txt
 xref-*.html
+localpycs/
 
-# Ignorar a pasta dist inteira,
-# mas permitir o executável final
+# Ignorar tudo em dist
 dist/*
-!dist/ProjetoCrencas/
-!dist/ProjetoCrencas/ProjetoCrencas.exe
+
+# Permitir apenas o executável final único
+!dist/ProjetoCrencas.exe
 
 # Logs
 *.log
