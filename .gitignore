@@ -1,42 +1,18 @@
-# ============================================================
+@'
 # Python cache
-# ============================================================
-
 __pycache__/
 *.py[cod]
 *$py.class
-*.pyo
-*.pyd
 
-
-# ============================================================
 # Virtual environments
-# ============================================================
-
 venv/
 .venv/
 env/
-ENV/
 
-
-# ============================================================
-# Environment variables / secrets
-# ============================================================
-
-.env
-.env.*
-!.env.example
-
-
-# ============================================================
-# PyInstaller / builds
-# ============================================================
-
+# PyInstaller / build outputs
 build/
-dist/*
-!dist/
-!dist/ProjetoCrencas.exe
-
+ProjetoCrencas/
+localpycs/
 *.toc
 *.pyz
 *.pkg
@@ -44,80 +20,21 @@ dist/*
 base_library.zip
 warn-*.txt
 xref-*.html
-localpycs/
 
-# Manter o ficheiro spec versionado
-!ProjetoCrencas.spec
+# Ignorar a pasta dist inteira,
+# mas permitir o executável final
+dist/*
+!dist/ProjetoCrencas/
+!dist/ProjetoCrencas/ProjetoCrencas.exe
 
-# ============================================================
-# Executáveis / instaladores gerados localmente
-# ============================================================
-
-*.exe
-!dist/ProjetoCrencas.exe
-*.msi
-
-# ============================================================
 # Logs
-# ============================================================
-
 *.log
-logs/
 
-
-# ============================================================
-# Temporary files
-# ============================================================
-
-tmp/
-temp/
-*.tmp
-*.bak
-*.swp
-
-
-# ============================================================
-# Test / coverage
-# ============================================================
-
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-
-
-# ============================================================
-# Type checkers / linters
-# ============================================================
-
-.mypy_cache/
-.ruff_cache/
-.pyre/
-
-
-# ============================================================
 # OS files
-# ============================================================
-
 .DS_Store
 Thumbs.db
-desktop.ini
 
-
-# ============================================================
 # IDE / editor
-# ============================================================
-
 .vscode/
 .idea/
-
-
-# ============================================================
-# Generated reports / exports
-# ============================================================
-
-exports/
-reports/
-relatorios_gerados/
-*.generated.pdf
+'@ | Set-Content -Encoding UTF8 .gitignore

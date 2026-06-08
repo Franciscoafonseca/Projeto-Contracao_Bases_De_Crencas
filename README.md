@@ -1,32 +1,32 @@
-# Projeto de Revisão de Crenças
+﻿# Projeto de RevisÃ£o de CrenÃ§as
 
-## Descrição
-Este projeto implementa um sistema de revisão de crenças em Python baseado em lógica proposicional. Permite representar fórmulas, avaliar consequência lógica, testar tautologias e aplicar operadores de contração de crenças.
+## DescriÃ§Ã£o
+Este projeto implementa um sistema de revisÃ£o de crenÃ§as em Python baseado em lÃ³gica proposicional. Permite representar fÃ³rmulas, avaliar consequÃªncia lÃ³gica, testar tautologias e aplicar operadores de contraÃ§Ã£o de crenÃ§as.
 
-Inclui também interface gráfica, testes e uma versão executável.
+Inclui tambÃ©m interface grÃ¡fica, testes e uma versÃ£o executÃ¡vel.
 
 ## Estrutura do projeto
-- logica/__init__.py - facilita imports dos módulos
-- logica/belief_base.py - estrutura da base de crenças
-- logica/contraction.py - operadores de contração (partial meet e kernel)
-- logica/cp_logic.py - parser, fórmulas, tautologia e consequência lógica
-- main.py - execução em modo texto
-- main_gui.py - interface gráfica
+- logica/__init__.py - facilita imports dos mÃ³dulos
+- logica/belief_base.py - estrutura da base de crenÃ§as
+- logica/contraction.py - operadores de contraÃ§Ã£o (partial meet e kernel)
+- logica/cp_logic.py - parser, fÃ³rmulas, tautologia e consequÃªncia lÃ³gica
+- main.py - execuÃ§Ã£o em modo texto
+- main_gui.py - interface grÃ¡fica
 - main_partial_meet_test.py - testes
-- dist/ProjetoCrencas.exe - executável
-- ProjetoCrencas.spec - configuração do PyInstaller
+- dist/ProjetoCrencas/ProjetoCrencas.exe - executÃ¡vel
+- ProjetoCrencas.spec - configuraÃ§Ã£o do PyInstaller
 
 ## Funcionalidades
-- parsing de fórmulas proposicionais
-- verificação de fórmulas válidas
-- cálculo de consequência lógica
+- parsing de fÃ³rmulas proposicionais
+- verificaÃ§Ã£o de fÃ³rmulas vÃ¡lidas
+- cÃ¡lculo de consequÃªncia lÃ³gica
 - teste de tautologias (truth-table e SAT)
-- gestão de base de crenças
-- operadores de contração:
+- gestÃ£o de base de crenÃ§as
+- operadores de contraÃ§Ã£o:
   - partial meet contraction
   - kernel contraction
 
-## Sintaxe das fórmulas
+## Sintaxe das fÃ³rmulas
 Exemplos:
 - p
 - neg p
@@ -36,11 +36,11 @@ Exemplos:
 - (p eq q)
 
 Operadores:
-- neg - negação
-- e - conjunção
-- ou - disjunção
-- imp - implicação
-- eq - equivalência
+- neg - negaÃ§Ã£o
+- e - conjunÃ§Ã£o
+- ou - disjunÃ§Ã£o
+- imp - implicaÃ§Ã£o
+- eq - equivalÃªncia
 
 ## Tecnologias
 - Python
@@ -56,52 +56,52 @@ Operadores:
 Na pasta do projeto:
 python main.py
 
-Interface gráfica:
+Interface grÃ¡fica:
 python main_gui.py
 
 Testes:
 python main_partial_meet_test.py
 
-### Executar versão compilada
-Ir à pasta dist e executar:
+### Executar versÃ£o compilada
+Ir Ã  pasta dist e executar:
 ProjetoCrencas.exe
 
-## Dependências
+## DependÃªncias
 O projeto usa essencialmente bibliotecas standard do Python.
 
-Se necessário:
+Se necessÃ¡rio:
 pip install -r requirements.txt
 
 ## Funcionamento
 
-### Base de crenças
-Armazena fórmulas como strings:
+### Base de crenÃ§as
+Armazena fÃ³rmulas como strings:
 - p
 - p imp q
 - neg q
 
 Permite:
-- adicionar fórmulas
-- remover fórmulas
-- listar conteúdo
+- adicionar fÃ³rmulas
+- remover fÃ³rmulas
+- listar conteÃºdo
 
-### Consequência lógica
-Verifica se premissas implicam uma conclusão.
+### ConsequÃªncia lÃ³gica
+Verifica se premissas implicam uma conclusÃ£o.
 
 Exemplo:
 premissas: p imp q, p  
-conclusão: q  
+conclusÃ£o: q  
 
 ### Tautologia
-Verifica se uma fórmula é sempre verdadeira.
+Verifica se uma fÃ³rmula Ã© sempre verdadeira.
 
 Exemplo:
 (p imp q) eq (neg q imp neg p)
 
-### Contração de crenças
-Remove fórmulas da base para deixar de implicar uma dada fórmula.
+### ContraÃ§Ã£o de crenÃ§as
+Remove fÃ³rmulas da base para deixar de implicar uma dada fÃ³rmula.
 
-Métodos:
+MÃ©todos:
 - partial meet contraction
 - kernel contraction
 
@@ -111,16 +111,16 @@ Base:
 - p imp q
 - q imp r
 
-Contração por r:
-- sistema remove subconjuntos mínimos
-- devolve nova base que não implica r
+ContraÃ§Ã£o por r:
+- sistema remove subconjuntos mÃ­nimos
+- devolve nova base que nÃ£o implica r
 
 ## Objetivo
 Aplicar conceitos de:
-- lógica proposicional
-- representação de conhecimento
-- revisão de crenças
-- algoritmos de decisão
+- lÃ³gica proposicional
+- representaÃ§Ã£o de conhecimento
+- revisÃ£o de crenÃ§as
+- algoritmos de decisÃ£o
 
-## Conclusão
-O projeto demonstra a implementação prática de revisão de crenças, permitindo manipular fórmulas, verificar implicações e aplicar operadores clássicos sobre bases de conhecimento.****
+## ConclusÃ£o
+O projeto demonstra a implementaÃ§Ã£o prÃ¡tica de revisÃ£o de crenÃ§as, permitindo manipular fÃ³rmulas, verificar implicaÃ§Ãµes e aplicar operadores clÃ¡ssicos sobre bases de conhecimento.****
