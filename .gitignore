@@ -1,16 +1,16 @@
-@'
-# Python cache
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Virtual environments
-venv/
+# Ambientes virtuais
 .venv/
+venv/
 env/
 
-# PyInstaller / build outputs
+# PyInstaller
 build/
+dist/
 ProjetoCrencas/
 *.toc
 *.pyz
@@ -21,20 +21,19 @@ warn-*.txt
 xref-*.html
 localpycs/
 
-# Ignorar tudo em dist
-dist/*
+# Relatórios/testes gerados
+relatorios_teste_pdf/
 
-# Permitir apenas o executável final único
-!dist/ProjetoCrencas.exe
+# Ficheiros comprimidos de entrega
+*.zip
 
-# Logs
-*.log
-
-# OS files
+# Sistema/IDE
+.vscode/
 .DS_Store
 Thumbs.db
 
-# IDE / editor
-.vscode/
-.idea/
-'@ | Set-Content -Encoding UTF8 .gitignore
+*.zip
+build/
+dist/
+ProjetoCrencas/
+__pycache__/
