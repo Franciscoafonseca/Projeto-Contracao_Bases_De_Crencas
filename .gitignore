@@ -31,3 +31,9 @@ relatorios_teste_pdf/
 .vscode/
 .DS_Store
 Thumbs.db
+
+*.zip
+build/
+dist/
+ProjetoCrencas/
+__pycache__/
