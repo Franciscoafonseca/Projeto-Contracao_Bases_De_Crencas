@@ -1,17 +1,17 @@
-# Python
+﻿# Python
 __pycache__/
 *.py[cod]
 *$py.class
 
 # Ambientes virtuais
-.venv/
 venv/
+.venv/
 env/
 
-# PyInstaller
+# PyInstaller / builds
 build/
 dist/
-ProjetoCrencas/
+*.spec.old
 *.toc
 *.pyz
 *.pkg
@@ -21,19 +21,19 @@ warn-*.txt
 xref-*.html
 localpycs/
 
-# Relatórios/testes gerados
-relatorios_teste_pdf/
-
-# Ficheiros comprimidos de entrega
+# Executáveis e ficheiros compactados
+*.exe
 *.zip
+*.rar
+*.7z
 
-# Sistema/IDE
-.vscode/
+# Logs
+*.log
+
+# Sistema operativo
 .DS_Store
 Thumbs.db
 
-*.zip
-build/
-dist/
-ProjetoCrencas/
-__pycache__/
+# IDE / editor
+.vscode/
+.idea/

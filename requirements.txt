@@ -1,0 +1,6 @@
+@'
+customtkinter
+reportlab
+pillow
+pyinstaller
+'@ | Set-Content -Encoding UTF8 requirements.txt
