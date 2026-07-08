@@ -85,17 +85,26 @@ Operadores disponíveis:
 
 ### Opção 1 — Executar a versão compilada
 
-A forma mais simples de testar o projeto é executar o ficheiro:
+A versão executável para Windows está disponível na secção **Releases** do GitHub.
 
-```text
-dist/ProjetoCrencas.exe
-```
+Passos:
 
-No Windows, basta abrir a pasta `dist` e clicar duas vezes em:
+1. Abrir a página do projeto no GitHub.
+2. Ir a **Releases**.
+3. Descarregar `ProjetoCrencas-Windows.zip`.
+4. Extrair o ficheiro ZIP.
+5. Executar `ProjetoCrencas.exe`.
 
-```text
-ProjetoCrencas.exe
-```
+Nota: não apagar a pasta `_internal`, pois é necessária para o funcionamento da aplicação.
+
+### Opção 2 — Executar com Python
+
+Na pasta principal do projeto:
+
+````bash
+pip install -r requirements.txt
+python main_gui.py
+
 
 ---
 
@@ -105,7 +114,7 @@ Na pasta principal do projeto, executar:
 
 ```bash
 python main_gui.py
-```
+````
 
 ou:
 
