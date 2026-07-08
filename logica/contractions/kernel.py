@@ -181,6 +181,9 @@ def kernel_contraction_with_steps(
 ) -> tuple[BeliefBase, List[str]]:
     """
     Contração Kernel com explicação passo a passo.
+
+    Mesmo quando α é tautologia ou quando A não implica α,
+    a função mostra kernels, incisão σ e base final.
     """
     steps: List[str] = []
 
@@ -197,65 +200,60 @@ def kernel_contraction_with_steps(
         return BeliefBase(formulas=A), steps
 
     alpha_ast = parse_formula(alpha)
+    alpha_e_tautologia = is_tautology(alpha_ast)
 
     # 1. Failure
     steps.append("")
     steps.append("1. Failure")
 
-    if is_tautology(alpha_ast):
+    if alpha_e_tautologia:
         steps.append(f"α = {alpha} é tautologia.")
         steps.append("Não é possível deixar de implicar uma tautologia.")
-        steps.append("Resultado: base inalterada.")
-        return BeliefBase(formulas=A), steps
+        steps.append("A incisão será vazia e a base ficará inalterada.")
+    else:
+        steps.append(f"α = {alpha} não é tautologia.")
 
-    steps.append(f"α = {alpha} não é tautologia.")
-
-    # 2. Vacuity
+    # 2. Kernels
     steps.append("")
-    steps.append("2. Vacuity")
-
-    if not implica(A, alpha):
-        steps.append(f"A não implica α, isto é, A ⊬ {alpha}.")
-        steps.append("Logo, não é necessário remover nada.")
-        steps.append("Resultado: base inalterada.")
-        return BeliefBase(formulas=A), steps
-
-    steps.append(f"A implica α, isto é, A ⊢ {alpha}.")
-    steps.append("Logo, é necessário contrair a base.")
-
-    # 3. Kernels
-    steps.append("")
-    steps.append("3. Cálculo dos kernels")
+    steps.append("2. Cálculo dos kernels")
 
     partes = conjunto_das_partes(A)
     steps.append(f"Foram gerados {len(partes)} subconjuntos de A.")
 
     implicam_alpha = conjuntos_que_implicam(partes, alpha)
-    steps.append(f"Desses, {len(implicam_alpha)} implicam α.")
-
     kerns = minimais_por_inclusao(implicam_alpha)
 
+    if alpha_e_tautologia:
+        steps.append("Como α é tautologia, o conjunto vazio já implica α.")
+        steps.append("Assim, o kernel mínimo é o conjunto vazio.")
+    elif not implica(A, alpha):
+        steps.append(f"A não implica α, isto é, A ⊬ {alpha}.")
+        steps.append("Logo, não existem kernels relevantes.")
+    else:
+        steps.append(f"A implica α, isto é, A ⊢ {alpha}.")
+
+    steps.append(f"Desses, {len(implicam_alpha)} implicam α.")
     steps.append("Kernels encontrados:")
     steps.append(format_set_of_sets_text(kerns))
 
-    if not kerns:
-        steps.append("Nenhum kernel encontrado. Base devolvida sem alterações.")
-        return BeliefBase(formulas=A), steps
-
-    # 4. Incisão
+    # 3. Incisão
     steps.append("")
-    steps.append("4. Aplicação da função de incisão σ")
+    steps.append("3. Aplicação da função de incisão σ")
 
     formulas_a_remover = incisao(kerns, A, estrategia=estrategia)
+    formulas_ordenadas = [f for f in A if f in formulas_a_remover]
 
-    steps.append(
-        "Fórmulas escolhidas para remover: "
-        + format_base_text([f for f in A if f in formulas_a_remover])
-    )
+    if not formulas_ordenadas:
+        steps.append("A incisão é vazia: nenhuma fórmula precisa de ser removida.")
+    else:
+        steps.append(
+            "Fórmulas escolhidas para remover: "
+            + format_base_text(formulas_ordenadas)
+        )
 
-    # 5. Resultado final
+    # 4. Resultado final
     steps.append("")
-    steps.append("5. Remoção das fórmulas escolhidas")
+    steps.append("4. Remoção das fórmulas escolhidas")
 
     resultado = [f for f in A if f not in formulas_a_remover]
 
@@ -343,8 +341,33 @@ def kernel_contraction_manual_with_steps(
     steps.append("")
     steps.append("4. Validação da incisão manual σ")
 
+    incisao_vazia_permitida = (not kerns) or all(len(k) == 0 for k in kerns)
+
     if not formulas_a_remover_set:
-        raise ValueError("Na incisão manual, tens de escolher pelo menos uma fórmula.")
+        if incisao_vazia_permitida:
+            steps.append("A incisão manual vazia é válida neste caso.")
+            steps.append("Não existem fórmulas que precisem de ser removidas.")
+        else:
+            raise ValueError("Na incisão manual, tens de escolher pelo menos uma fórmula.")
+    else:
+        formulas_invalidas = formulas_a_remover_set.difference(set(A))
+
+        if formulas_invalidas:
+            raise ValueError(
+                "A incisão manual contém fórmulas que não pertencem à base: "
+                + format_base_text(sorted(formulas_invalidas))
+            )
+
+        if not hitting_set_valido(formulas_a_remover_set, kerns):
+            raise ValueError(
+                "Incisão inválida: as fórmulas escolhidas não tocam em todos os kernels."
+            )
+
+        formulas_ordenadas = [f for f in A if f in formulas_a_remover_set]
+
+        steps.append("Fórmulas escolhidas pelo utilizador:")
+        steps.append(format_base_text(formulas_ordenadas))
+        steps.append("A incisão é válida: toca em todos os kernels.")
 
     formulas_invalidas = formulas_a_remover_set.difference(set(A))
 

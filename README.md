@@ -164,11 +164,11 @@ As pastas e ficheiros temporários criados durante a compilação, como `build/`
 
 ### Partial Meet Contraction
 
-A contração Partial Meet baseia-se na identificação dos subconjuntos máximos da base de crenças que deixam de implicar a fórmula a contrair. A partir desses subconjuntos, é aplicada uma função de seleção para obter a nova base.
+A contração Partial Meet baseia-se na identificação dos subconjuntos máximais da base de crenças que deixam de implicar a fórmula a contrair. A partir desses subconjuntos, é aplicada uma função de seleção para obter a nova base.
 
 ### Kernel Contraction
 
-A contração Kernel identifica subconjuntos mínimos da base que implicam a fórmula a contrair. Em seguida, uma função de incisão escolhe fórmulas a remover, garantindo que a base resultante deixa de implicar essa fórmula.
+A contração Kernel identifica subconjuntos mínimais da base que implicam a fórmula a contrair. Em seguida, uma função de incisão escolhe fórmulas a remover, garantindo que a base resultante deixa de implicar essa fórmula.
 
 ---
 

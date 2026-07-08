@@ -12,11 +12,14 @@ def choose_remainders_manual(
     font_small,
 ) -> list[list[str]] | None:
     if not rems:
-        messagebox.showwarning(
+        confirmar = messagebox.askokcancel(
             "Sem remainders",
-            "Não existem remainders para selecionar.",
+            "Não existem remainders próprios para selecionar.\n\n"
+            "Isto acontece, por exemplo, quando a fórmula alvo é uma tautologia.\n\n"
+            "Será usada a seleção vazia e a base ficará inalterada.",
+            parent=parent,
         )
-        return None
+        return [] if confirmar else None
 
     dialog = ctk.CTkToplevel(parent)
     dialog.title("Seleção manual de remainders")
@@ -120,12 +123,15 @@ def choose_kernel_incision_manual(
     a incisão σ, isto é, as fórmulas a remover na Kernel Contraction.
     """
 
-    if not kerns:
-        messagebox.showwarning(
-            "Sem kernels",
-            "Não existem kernels para selecionar uma incisão.",
+    if not kerns or all(len(k) == 0 for k in kerns):
+        confirmar = messagebox.askokcancel(
+            "Incisão vazia",
+            "Não existem fórmulas que precisem de ser removidas.\n\n"
+            "A incisão σ será vazia e a base ficará inalterada.",
+            parent=parent,
         )
-        return None
+
+        return [] if confirmar else None
 
     dialog = ctk.CTkToplevel(parent)
     dialog.title("Incisão manual de kernels")

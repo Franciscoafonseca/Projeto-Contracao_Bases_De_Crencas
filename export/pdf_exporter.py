@@ -185,19 +185,22 @@ def _try_register_unicode_font() -> tuple[str, str, bool]:
     Não distribui nem copia fontes: apenas regista fontes locais.
     """
     candidates_regular = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+        "C:/Windows/Fonts/seguisym.ttf",      # Segoe UI Symbol
         "C:/Windows/Fonts/segoeui.ttf",
         "C:/Windows/Fonts/arial.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
         "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
         "/System/Library/Fonts/Supplemental/Arial.ttf",
         "/Library/Fonts/Arial Unicode.ttf",
     ]
+
     candidates_bold = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
+        "C:/Windows/Fonts/seguisym.ttf",      # usar a mesma para símbolos
         "C:/Windows/Fonts/segoeuib.ttf",
         "C:/Windows/Fonts/arialbd.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
         "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
         "/Library/Fonts/Arial Bold.ttf",
     ]
@@ -286,36 +289,57 @@ def _p_markup(markup: str, style: ParagraphStyle) -> Paragraph:
             markup = markup.replace(old, new)
     return Paragraph(markup, style)
 
+def _formula_symbols(text: object) -> str:
+    """
+    Converte a sintaxe textual do projeto para simbologia lógica.
+    Usado apenas para representação visual no PDF.
+    """
+    text = "" if text is None else str(text)
+    text = re.sub(r"\s+", " ", text).strip()
+
+    replacements = [
+        (r"\bneg\b", "¬"),
+        (r"\bnot\b", "¬"),
+        (r"\bnao\b", "¬"),
+        (r"\bnão\b", "¬"),
+
+        (r"\be\b", "∧"),
+        (r"\band\b", "∧"),
+
+        (r"\bou\b", "∨"),
+        (r"\bor\b", "∨"),
+
+        (r"\bimp\b", "→"),
+        (r"->", "→"),
+
+        (r"\beq\b", "↔"),
+        (r"<->", "↔"),
+    ]
+
+    for pattern, repl in replacements:
+        text = re.sub(pattern, repl, text, flags=re.IGNORECASE)
+
+    text = text.replace("( ", "(").replace(" )", ")")
+    text = text.replace("{ ", "{").replace(" }", "}")
+
+    return text
 
 def _normalize_formula(value: object) -> str:
     """Transforma a sintaxe textual do projeto em símbolos mais bonitos no PDF."""
     text = _safe_text(value).strip()
+
     if not text:
         return ""
 
-    if HAS_UNICODE_FONT:
-        replacements = [
-            (r"\bneg\b", "¬"),
-            (r"\be\b", "∧"),
-            (r"\bou\b", "∨"),
-            (r"\bimp\b", "→"),
-            (r"\beq\b", "↔"),
-        ]
-        for pattern, repl in replacements:
-            text = re.sub(pattern, repl, text)
-
-    # Limpeza visual de espaços.
-    text = re.sub(r"\s+", " ", text).strip()
-    text = text.replace("( ", "(").replace(" )", ")")
-    return text
+    return _formula_symbols(text)
 
 
 def _normalize_text_line(value: object) -> str:
     text = _safe_text(value).strip()
+
     if not text:
         return ""
 
-    # Tradução de símbolos internos/estratégias para nomes legíveis.
     replacements = {
         "Estratégia γ: full": "Estratégia de seleção: Full meet",
         "Estratégia γ: first": "Estratégia de seleção: Maxichoice",
@@ -327,12 +351,31 @@ def _normalize_text_line(value: object) -> str:
         "Estratégia σ: manual": "Estratégia de incisão: Manual",
         "α =": "Fórmula alvo:",
         "Fórmula alvo α:": "Fórmula alvo:",
-        "A implica α": "A base inicial implica a fórmula alvo.",
-        "A não implica α": "A base inicial não implica a fórmula alvo.",
-        "A nao implica α": "A base inicial não implica a fórmula alvo.",
+        "A implica α": "A base inicial implica a fórmula alvo",
+        "A não implica α": "A base inicial não implica a fórmula alvo",
+        "A nao implica α": "A base inicial não implica a fórmula alvo",
     }
+
     for old, new in replacements.items():
         text = text.replace(old, new)
+
+    formula_prefixes = [
+        "Base inicial A:",
+        "Base inicial:",
+        "Fórmula alvo:",
+        "Formula alvo:",
+        "Base final:",
+        "Base resultante:",
+        "Resultado da interseção:",
+        "Resultado da intersecao:",
+    ]
+
+    for prefix in formula_prefixes:
+        if text.startswith(prefix):
+            left, right = text.split(":", 1)
+            text = f"{left}: {_formula_symbols(right.strip())}"
+            break
+
     return text
 
 
@@ -350,14 +393,24 @@ def _as_list(value: Any) -> list[Any]:
 
 def _clean_list(value: Any) -> list[str]:
     items = []
+
     for item in _as_list(value):
+
         if isinstance(item, (list, tuple, set)):
             inner = [_normalize_formula(x) for x in item if str(x).strip()]
-            text = "{" + ", ".join(inner) + "}"
+
+            # Um remainder/kernel vazio deve aparecer como ∅
+            if not inner:
+                text = "∅"
+            else:
+                text = "{" + ", ".join(inner) + "}"
+
         else:
             text = _normalize_formula(item)
+
         if text:
             items.append(text)
+
     return items
 
 
@@ -431,6 +484,17 @@ def _operator_key(operation: dict[str, Any]) -> str:
 def _palette(operation: dict[str, Any]) -> dict[str, Any]:
     return PALETTES.get(_operator_key(operation), PALETTES["default"])
 
+def _operation_badge_label(operation: dict[str, Any]) -> str:
+    if _options(operation):
+        return "Exploração de todas as possibilidades"
+
+    operator = _friendly_operator(operation.get("operator", ""))
+    strategy = _friendly_strategy(operation.get("strategy", ""))
+
+    if operator and strategy:
+        return f"{strategy}"
+
+    return "Estratégia não indicada"
 
 def _mode_label(operation: dict[str, Any]) -> str:
     if _options(operation):
@@ -1208,7 +1272,7 @@ def _process_timeline(
                 "Fórmula alvo",
                 "Identificar α e o que deve deixar de ser implicado.",
             ),
-            ("2", "Remainders", "Subconjuntos máximos que já não implicam α."),
+            ("2", "Remainders", "Subconjuntos máximais que já não implicam α."),
             ("3", "Seleção γ", "Escolha das alternativas conforme a estratégia."),
             ("4", "Interseção", "Intersetar seleções para obter a base final."),
         ]
@@ -1219,7 +1283,7 @@ def _process_timeline(
                 "Fórmula alvo",
                 "Identificar α e confirmar se a contração é necessária.",
             ),
-            ("2", "Kernels", "Subconjuntos mínimos que ainda implicam α."),
+            ("2", "Kernels", "Subconjuntos mínimais que ainda implicam α."),
             ("3", "Incisão σ", "Escolher fórmulas que cortam todos os kernels."),
             ("4", "Remoção", "Remover a incisão e apresentar a base final."),
         ]
@@ -1392,7 +1456,7 @@ def _overview_metrics_table(
             _metric_card(
                 label,
                 value,
-                "indicador",
+                "Fórmulas" if value != 1 else "Fórmula",
                 styles,
                 width,
                 band_color=band,
@@ -1411,7 +1475,7 @@ def _operator_explanation(operation: dict[str, Any]) -> str:
     if key == "partial meet":
         return (
             f"Foi aplicada uma contração por Partial Meet sobre a fórmula {target}. "
-            "Este método procura subconjuntos máximos da base que já não implicam a fórmula alvo, "
+            "Este método procura subconjuntos máximais da base que já não implicam a fórmula alvo, "
             "chamados remainders. Depois, a função de seleção γ escolhe alguns desses remainders "
             f"segundo a estratégia {strategy}. A base final é obtida pela interseção dos remainders selecionados."
         )
@@ -1419,7 +1483,7 @@ def _operator_explanation(operation: dict[str, Any]) -> str:
     if key == "kernel":
         return (
             f"Foi aplicada uma contração por Kernel sobre a fórmula {target}. "
-            "Este método identifica subconjuntos mínimos da base que ainda implicam a fórmula alvo, "
+            "Este método identifica subconjuntos mínimais da base que ainda implicam a fórmula alvo, "
             "chamados kernels. Depois, a função de incisão σ escolhe fórmulas a remover, tocando pelo menos "
             f"um elemento de cada kernel, segundo a estratégia {strategy}."
         )
@@ -2043,7 +2107,33 @@ def _steps_section(
         )
         story.append(Spacer(1, 0.18 * cm))
 
-    for title, lines in _split_steps_into_blocks(steps):
+        blocks = _split_steps_into_blocks(steps)
+
+    # Ocultar o passo Vacuity do relatório.
+    blocks = [
+        (title, lines)
+        for title, lines in blocks
+        if "vacuity" not in title.lower()
+        and "vacuidade" not in title.lower()
+    ]
+
+    # Renumerar os passos depois de remover Vacuity.
+    renumbered_blocks = []
+    step_number = 1
+
+    for title, lines in blocks:
+        match = re.match(r"^\d+\.\s*(.+)$", title.strip())
+
+        if match:
+            clean_title = match.group(1).strip()
+            renumbered_blocks.append((f"{step_number}. {clean_title}", lines))
+            step_number += 1
+        else:
+            renumbered_blocks.append((title, lines))
+
+    blocks = renumbered_blocks
+
+    for title, lines in blocks:
         title_table = Table(
             [[Paragraph(f"<b>{_html(title)}</b>", styles["subsection"])]],
             colWidths=[16.0 * cm],
@@ -2121,7 +2211,7 @@ def _unique_option_result_bases(
     results: list[tuple[str, list[str]]] = []
     for idx, option in enumerate(options, start=1):
         base = _option_result_base(option)
-        key = tuple(base)
+        key = tuple(sorted(base))
         if key in seen:
             continue
         seen.add(key)
@@ -2145,6 +2235,189 @@ def _format_result_bases_for_box(
         formatted.append(f"... e mais {hidden} resultado(s) distinto(s)")
     return formatted
 
+def _distinct_bases_final_sentence(
+    options: Sequence[dict[str, Any]],
+) -> str:
+    """
+    Cria uma frase final para o modo 'todas as possibilidades'.
+
+    Exemplo:
+    Das 10 possibilidades geradas, apenas 2 correspondem a bases finais diferentes.
+    Essas bases distintas aparecem pela primeira vez nas possibilidades com índices #1, #4.
+    """
+    total = len(options)
+
+    if total == 0:
+        return "Não foram recebidas possibilidades estruturadas para comparar bases finais."
+
+    unique_results = _unique_option_result_bases(options)
+    different = len(unique_results)
+
+    first_indices = [label for label, _base in unique_results]
+    indices_text = ", ".join(first_indices)
+
+    if different == 1:
+        return (
+            f"Das {total} possibilidade(s) gerada(s), apenas 1 corresponde a uma base final diferente. "
+            f"Essa base distinta aparece pela primeira vez na possibilidade com índice {indices_text}."
+        )
+
+    return (
+        f"Das {total} possibilidade(s) gerada(s), apenas {different} correspondem a bases finais diferentes. "
+        f"Essas bases distintas aparecem pela primeira vez nas possibilidades com índices {indices_text}."
+    )
+
+def _base_group_key(base: Sequence[str]) -> tuple[str, ...]:
+    """
+    Chave usada para agrupar bases finais iguais.
+
+    Como uma base de crenças é essencialmente um conjunto, a ordem das fórmulas
+    não deve criar bases "diferentes" artificialmente.
+    """
+    return tuple(sorted(str(item) for item in base))
+
+
+def _distinct_result_base_groups(
+    options: Sequence[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """
+    Agrupa as possibilidades por base final distinta.
+
+    Exemplo de saída:
+    [
+        {
+            "base_id": "B1",
+            "base": ["p", "q"],
+            "option_ids": ["#1", "#3", "#7"]
+        },
+        ...
+    ]
+    """
+    groups: list[dict[str, Any]] = []
+    positions: dict[tuple[str, ...], int] = {}
+
+    for idx, option in enumerate(options, start=1):
+        base = _option_result_base(option)
+        key = _base_group_key(base)
+        option_label = f"#{_option_id(option, idx)}"
+
+        if key not in positions:
+            positions[key] = len(groups)
+            groups.append(
+                {
+                    "base_id": f"B{len(groups) + 1}",
+                    "base": base,
+                    "option_ids": [option_label],
+                }
+            )
+        else:
+            group = groups[positions[key]]
+            if option_label not in group["option_ids"]:
+                group["option_ids"].append(option_label)
+
+    return groups
+
+
+def _distinct_result_bases_index_section(
+    options: Sequence[dict[str, Any]],
+    palette: dict[str, Any],
+    styles: dict[str, ParagraphStyle],
+    *,
+    max_bases: int = 6,
+    max_refs: int = 12,
+    max_formulas: int = 8,
+) -> list[Any]:
+    """
+    Tabela compacta para a primeira página do modo 'todas as possibilidades'.
+
+    Mostra apenas bases finais distintas e indica em que possibilidades/tabelas
+    essa base aparece.
+    """
+    groups = _distinct_result_base_groups(options)
+
+    if not groups:
+        return []
+
+    visible_groups = groups[:max_bases]
+    hidden = len(groups) - max_bases
+
+    rows: list[list[Any]] = [
+        [
+            Paragraph(_html("Base"), styles["small_bold"]),
+            Paragraph(_html("Possibilidades / tabelas"), styles["small_bold"]),
+            Paragraph(_html("Base final distinta"), styles["small_bold"]),
+        ]
+    ]
+
+    for group in visible_groups:
+        refs = group["option_ids"][:max_refs]
+        refs_text = ", ".join(refs)
+
+        if len(group["option_ids"]) > max_refs:
+            refs_text += f", ... e mais {len(group['option_ids']) - max_refs}"
+
+        base_text = _set_text(
+            group["base"],
+            empty="∅",
+            max_items=max_formulas,
+        )
+
+        rows.append(
+            [
+                Paragraph(_html(group["base_id"]), styles["small_bold"]),
+                Paragraph(_html(refs_text), styles["small"]),
+                Paragraph(_html(base_text), styles["formula"]),
+            ]
+        )
+
+    if hidden > 0:
+        rows.append(
+            [
+                Paragraph(_html("..."), styles["small_bold"]),
+                Paragraph(_html(f"Mais {hidden} base(s) distinta(s)"), styles["small"]),
+                Paragraph(
+                    _html("Consulta o detalhe das possibilidades nas páginas seguintes."),
+                    styles["small_muted"],
+                ),
+            ]
+        )
+
+    table = Table(
+        rows,
+        colWidths=[1.5 * cm, 5.0 * cm, 9.5 * cm],
+        hAlign="CENTER",
+        repeatRows=1,
+    )
+
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), palette["pale"]),
+                ("TEXTCOLOR", (0, 0), (-1, 0), palette["accent_dark"]),
+                ("BOX", (0, 0), (-1, -1), 0.45, BORDER_LIGHT),
+                ("INNERGRID", (0, 0), (-1, -1), 0.25, BORDER_LIGHT),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]
+        )
+    )
+
+    story: list[Any] = []
+    story.append(Spacer(1, 0.16 * cm))
+    story.append(_p("Bases finais distintas", styles["subsection_soft"]))
+    story.append(
+        _p(
+            "A tabela seguinte não repete todas as possibilidades: agrupa apenas as bases finais diferentes e indica em que possibilidades/tabelas cada base aparece.",
+            styles["small_muted"],
+        )
+    )
+    story.append(Spacer(1, 0.08 * cm))
+    story.append(table)
+
+    return story
 
 def _all_options_core_structures(
     operation: dict[str, Any]
@@ -2269,6 +2542,14 @@ def _all_options_compact_cover_section(
     story.append(structures_table)
     story.append(Spacer(1, 0.18 * cm))
 
+    story.extend(
+        _distinct_result_bases_index_section(
+            options,
+            palette,
+            styles,
+        )
+    )
+
     return story
 
 
@@ -2290,14 +2571,14 @@ def _methods_explanation_section(
         method_name = "Partial Meet"
         structures_name = "remainders"
         structures_explanation = (
-            "Os remainders são subconjuntos máximos da base inicial que já não implicam a fórmula a contrair. "
+            "Os remainders são subconjuntos máximais da base inicial que já não implicam a fórmula a contrair. "
             "Cada possibilidade corresponde a uma seleção γ de remainders, e o resultado final é obtido pela interseção dos remainders selecionados."
         )
     elif key == "kernel":
         method_name = "Kernel"
         structures_name = "kernels"
         structures_explanation = (
-            "Os kernels são subconjuntos mínimos da base inicial que ainda implicam a fórmula a contrair. "
+            "Os kernels são subconjuntos mínimais da base inicial que ainda implicam a fórmula a contrair. "
             "Cada possibilidade corresponde a uma incisão σ que remove pelo menos uma fórmula de cada kernel, produzindo uma base final possível."
         )
     else:
@@ -2319,13 +2600,16 @@ def _methods_explanation_section(
     )
     results_text = (
         f"A secção '{results_title}' resume bases finais distintas geradas no modo de todas as possibilidades. "
-        f"No total, foram geradas {options_count} possibilidade(s), mas o quadro compacto mostra apenas os resultados principais para evitar repetição."
+        f"No total, foram geradas {options_count} possibilidade(s), mas o quadro compacto mostra apenas os diferentes resultados para evitar repetições."
     )
+
+    distinct_bases_sentence = _distinct_bases_final_sentence(_options(operation))
 
     synthesis_body = (
         f"1. Base inicial: {base_text}\n"
         f"2. Fórmula a contrair: pretende-se contrair {target}, isto é, obter bases finais que deixem de a implicar.\n"
-        f"3. Resultados possíveis: {structures_text} {results_text}"
+        f"3. Resultados possíveis: {structures_text} {results_text}\n"
+        f"4. Síntese das bases finais: {distinct_bases_sentence}"
     )
 
     story: list[Any] = [PageBreak()]
@@ -2858,7 +3142,7 @@ def _normal_header_section(
             [
                 _badge(palette["name"], palette, styles, width=4.5 * cm),
                 _badge(
-                    "Contração individual",
+                    _operation_badge_label(operation),
                     palette,
                     styles,
                     width=7.0 * cm,

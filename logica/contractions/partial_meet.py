@@ -113,6 +113,10 @@ def partial_meet_contraction_with_steps(
 ) -> tuple[BeliefBase, List[str]]:
     """
     Contração Partial Meet com explicação passo a passo.
+
+    Mesmo quando α é tautologia ou quando A não implica α,
+    a função continua a explicação até aos remainders, seleção γ
+    e interseção, para o PDF não ficar incompleto.
     """
     steps: List[str] = []
 
@@ -129,63 +133,68 @@ def partial_meet_contraction_with_steps(
         return BeliefBase(formulas=A), steps
 
     alpha_ast = parse_formula(alpha)
+    alpha_e_tautologia = is_tautology(alpha_ast)
 
     # 1. Failure
     steps.append("")
     steps.append("1. Failure")
 
-    if is_tautology(alpha_ast):
+    if alpha_e_tautologia:
         steps.append(f"α = {alpha} é tautologia.")
         steps.append("Não é possível deixar de implicar uma tautologia.")
-        steps.append("Resultado: base inalterada.")
-        return BeliefBase(formulas=A), steps
+        steps.append("A contração deve manter a base inalterada.")
+    else:
+        steps.append(f"α = {alpha} não é tautologia.")
 
-    steps.append(f"α = {alpha} não é tautologia.")
-
-    # 2. Vacuity
+    # 2. Cálculo dos remainders
     steps.append("")
-    steps.append("2. Vacuity")
-
-    if not implica(A, alpha):
-        steps.append(f"A não implica a fórmula alvo {alpha}.")
-        steps.append("Logo, não é necessário remover nada.")
-        steps.append("Resultado: base inalterada.")
-        return BeliefBase(formulas=A), steps
-
-    steps.append(f"A implica a fórmula alvo {alpha}.")
-    steps.append("Logo, é necessário contrair a base.")
-
-    # 3. Cálculo dos remainders
-    steps.append("")
-    steps.append("3. Cálculo dos remainders")
+    steps.append("2. Cálculo dos remainders")
 
     partes = conjunto_das_partes(A)
     steps.append(f"Foram gerados {len(partes)} subconjuntos de A.")
 
-    nao_implicam = conjuntos_que_nao_implicam(partes, alpha)
-    steps.append(f"Desses, {len(nao_implicam)} não implicam α.")
+    if alpha_e_tautologia:
+        nao_implicam = []
+        rems = []
+        steps.append("Como α é tautologia, todos os subconjuntos implicam α.")
+        steps.append("Logo, não existem remainders próprios.")
+    else:
+        nao_implicam = conjuntos_que_nao_implicam(partes, alpha)
+        rems = maximais_por_inclusao(nao_implicam)
 
-    rems = maximais_por_inclusao(nao_implicam)
+        if not implica(A, alpha):
+            steps.append(f"A não implica α, isto é, A ⊬ {alpha}.")
+            steps.append("Assim, o próprio A é um remainder maximal.")
+        else:
+            steps.append(f"A implica α, isto é, A ⊢ {alpha}.")
+            steps.append("Logo, é necessário procurar subconjuntos maximais que deixem de implicar α.")
+
+        steps.append(f"Desses, {len(nao_implicam)} não implicam α.")
 
     steps.append("Remainders encontrados:")
     steps.append(format_set_of_sets_text(rems))
 
-    # 4. Seleção γ
+    # 3. Seleção γ
     steps.append("")
-    steps.append("4. Aplicação da função de seleção γ")
+    steps.append("3. Aplicação da função de seleção γ")
 
-    selecionados = selecionar_remainders(rems, estrategia=estrategia)
+    if alpha_e_tautologia:
+        selecionados = []
+        selecionados_para_resultado = [A]
+        steps.append("Como A⊥α = ∅, aplica-se a convenção γ(∅) = {A}.")
+        steps.append("Isto representa a escolha trivial que mantém a base inalterada.")
+    else:
+        selecionados = selecionar_remainders(rems, estrategia=estrategia)
+        selecionados_para_resultado = selecionados
 
     steps.append("Remainders selecionados:")
     steps.append(format_set_of_sets_text(selecionados))
 
-    # 5. Interseção
+    # 4. Interseção
     steps.append("")
-    steps.append("5. Interseção dos remainders selecionados")
+    steps.append("4. Interseção dos remainders selecionados")
 
-    resultado = intersecao_de_conjuntos(selecionados)
-
-    # Mantém a ordem original da base.
+    resultado = intersecao_de_conjuntos(selecionados_para_resultado)
     resultado_ordenado = [f for f in A if f in resultado]
 
     steps.append(f"Resultado da interseção: {format_base_text(resultado_ordenado)}")
@@ -222,15 +231,15 @@ def partial_meet_contraction_manual_with_steps(
     """
     Contração Partial Meet com seleção manual de remainders.
 
-    O utilizador escolhe explicitamente quais elementos de A⊥α
-    serão usados pela função de seleção γ.
+    Aceita seleção vazia quando α é tautologia, porque nesse caso
+    A⊥α = ∅ e usa-se a convenção γ(∅) = {A}.
     """
     steps: List[str] = []
 
     A = [normalizar_formula(f) for f in base.formulas if normalizar_formula(f)]
     alpha = normalizar_formula(alpha)
 
-    steps.append("=== Partial Meet Contraction — Seleção Manual ===")
+    steps.append("=== Partial Meet Contraction - Seleção Manual ===")
     steps.append(f"Base inicial A: {format_base_text(A)}")
     steps.append(f"Fórmula alvo α: {alpha}")
     steps.append("Estratégia γ: manual")
@@ -240,72 +249,80 @@ def partial_meet_contraction_manual_with_steps(
         return BeliefBase(formulas=A), steps
 
     alpha_ast = parse_formula(alpha)
+    alpha_e_tautologia = is_tautology(alpha_ast)
 
     # 1. Failure
     steps.append("")
     steps.append("1. Failure")
 
-    if is_tautology(alpha_ast):
+    if alpha_e_tautologia:
         steps.append(f"α = {alpha} é tautologia.")
         steps.append("Não é possível deixar de implicar uma tautologia.")
-        steps.append("Resultado: base inalterada.")
-        return BeliefBase(formulas=A), steps
+        steps.append("A contração deve manter a base inalterada.")
+    else:
+        steps.append(f"α = {alpha} não é tautologia.")
 
-    steps.append(f"α = {alpha} não é tautologia.")
-
-    # 2. Vacuity
+    # 2. Cálculo dos remainders
     steps.append("")
-    steps.append("2. Vacuity")
-
-    if not implica(A, alpha):
-        steps.append(f"A não implica α, isto é, A ⊬ {alpha}.")
-        steps.append("Logo, não é necessário remover nada.")
-        steps.append("Resultado: base inalterada.")
-        return BeliefBase(formulas=A), steps
-
-    steps.append(f"A implica α, isto é, A ⊢ {alpha}.")
-    steps.append("Logo, é necessário contrair a base.")
-
-    # 3. Calcular todos os remainders
-    steps.append("")
-    steps.append("3. Cálculo dos remainders")
+    steps.append("2. Cálculo dos remainders")
 
     rems = remainders(A, alpha)
+
+    if alpha_e_tautologia:
+        steps.append("Como α é tautologia, não existem remainders próprios.")
+    elif not implica(A, alpha):
+        steps.append(f"A não implica α, isto é, A ⊬ {alpha}.")
+        steps.append("Assim, o próprio A é um remainder maximal.")
+    else:
+        steps.append(f"A implica α, isto é, A ⊢ {alpha}.")
 
     steps.append("Remainders encontrados:")
     steps.append(format_set_of_sets_text(rems))
 
-    # 4. Validar seleção manual
+    # 3. Seleção manual γ
     steps.append("")
-    steps.append("4. Seleção manual da função γ")
+    steps.append("3. Seleção manual da função γ")
 
-    if not remainders_selecionados:
-        raise ValueError("Na seleção manual, tens de escolher pelo menos um remainder.")
+    if alpha_e_tautologia:
+        selecionados_normalizados = []
+        selecionados_para_resultado = [A]
 
-    rems_normalizados = {frozenset(normalizar_formula(f) for f in r) for r in rems}
+        steps.append("O utilizador confirmou a seleção vazia.")
+        steps.append("Como A⊥α = ∅, aplica-se a convenção γ(∅) = {A}.")
+        steps.append("Remainders escolhidos pelo utilizador:")
+        steps.append(format_set_of_sets_text(selecionados_normalizados))
 
-    selecionados_normalizados: List[List[str]] = []
+    else:
+        if not remainders_selecionados:
+            raise ValueError("Na seleção manual, tens de escolher pelo menos um remainder.")
 
-    for r in remainders_selecionados:
-        r_norm = [normalizar_formula(f) for f in r if normalizar_formula(f)]
+        rems_normalizados = {
+            frozenset(normalizar_formula(f) for f in r)
+            for r in rems
+        }
 
-        if frozenset(r_norm) not in rems_normalizados:
-            raise ValueError(
-                "A seleção manual contém um conjunto que não é remainder válido."
-            )
+        selecionados_normalizados: List[List[str]] = []
 
-        selecionados_normalizados.append(r_norm)
+        for r in remainders_selecionados:
+            r_norm = [normalizar_formula(f) for f in r if normalizar_formula(f)]
 
-    steps.append("Remainders escolhidos pelo utilizador:")
-    steps.append(format_set_of_sets_text(selecionados_normalizados))
+            if frozenset(r_norm) not in rems_normalizados:
+                raise ValueError(
+                    "A seleção manual contém um conjunto que não é remainder válido."
+                )
 
-    # 5. Interseção
+            selecionados_normalizados.append(r_norm)
+
+        selecionados_para_resultado = selecionados_normalizados
+
+        steps.append("Remainders escolhidos pelo utilizador:")
+        steps.append(format_set_of_sets_text(selecionados_normalizados))
+
+    # 4. Interseção
     steps.append("")
-    steps.append("5. Interseção dos remainders escolhidos")
+    steps.append("4. Interseção dos remainders escolhidos")
 
-    resultado = intersecao_de_conjuntos(selecionados_normalizados)
-
-    # Mantém a ordem original da base.
+    resultado = intersecao_de_conjuntos(selecionados_para_resultado)
     resultado_ordenado = [f for f in A if f in resultado]
 
     steps.append(f"Resultado da interseção: {format_base_text(resultado_ordenado)}")
