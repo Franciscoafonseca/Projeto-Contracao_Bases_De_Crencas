@@ -185,7 +185,7 @@ def _try_register_unicode_font() -> tuple[str, str, bool]:
     Não distribui nem copia fontes: apenas regista fontes locais.
     """
     candidates_regular = [
-        "C:/Windows/Fonts/seguisym.ttf",      # Segoe UI Symbol
+        "C:/Windows/Fonts/seguisym.ttf",  # Segoe UI Symbol
         "C:/Windows/Fonts/segoeui.ttf",
         "C:/Windows/Fonts/arial.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -196,7 +196,7 @@ def _try_register_unicode_font() -> tuple[str, str, bool]:
     ]
 
     candidates_bold = [
-        "C:/Windows/Fonts/seguisym.ttf",      # usar a mesma para símbolos
+        "C:/Windows/Fonts/seguisym.ttf",  # usar a mesma para símbolos
         "C:/Windows/Fonts/segoeuib.ttf",
         "C:/Windows/Fonts/arialbd.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
@@ -289,6 +289,7 @@ def _p_markup(markup: str, style: ParagraphStyle) -> Paragraph:
             markup = markup.replace(old, new)
     return Paragraph(markup, style)
 
+
 def _formula_symbols(text: object) -> str:
     """
     Converte a sintaxe textual do projeto para simbologia lógica.
@@ -300,18 +301,12 @@ def _formula_symbols(text: object) -> str:
     replacements = [
         (r"\bneg\b", "¬"),
         (r"\bnot\b", "¬"),
-        (r"\bnao\b", "¬"),
-        (r"\bnão\b", "¬"),
-
         (r"\be\b", "∧"),
         (r"\band\b", "∧"),
-
         (r"\bou\b", "∨"),
         (r"\bor\b", "∨"),
-
         (r"\bimp\b", "→"),
         (r"->", "→"),
-
         (r"\beq\b", "↔"),
         (r"<->", "↔"),
     ]
@@ -323,6 +318,7 @@ def _formula_symbols(text: object) -> str:
     text = text.replace("{ ", "{").replace(" }", "}")
 
     return text
+
 
 def _normalize_formula(value: object) -> str:
     """Transforma a sintaxe textual do projeto em símbolos mais bonitos no PDF."""
@@ -349,7 +345,6 @@ def _normalize_text_line(value: object) -> str:
         "Estratégia σ: first_each": "Estratégia de incisão: Primeira por kernel",
         "Estratégia σ: min_hitting": "Estratégia de incisão: Incisão mínima",
         "Estratégia σ: manual": "Estratégia de incisão: Manual",
-        "α =": "Fórmula alvo:",
         "Fórmula alvo α:": "Fórmula alvo:",
         "A implica α": "A base inicial implica a fórmula alvo",
         "A não implica α": "A base inicial não implica a fórmula alvo",
@@ -376,6 +371,17 @@ def _normalize_text_line(value: object) -> str:
             text = f"{left}: {_formula_symbols(right.strip())}"
             break
 
+    text = re.sub(
+        r"^\s*α\s*=\s*",
+        "Fórmula alvo: ",
+        text,
+    )
+
+    text = re.sub(
+        r"A⊥\((.*?)\)",
+        lambda match: (f"A⊥({_normalize_formula(match.group(1))})"),
+        text,
+    )
     return text
 
 
@@ -484,6 +490,7 @@ def _operator_key(operation: dict[str, Any]) -> str:
 def _palette(operation: dict[str, Any]) -> dict[str, Any]:
     return PALETTES.get(_operator_key(operation), PALETTES["default"])
 
+
 def _operation_badge_label(operation: dict[str, Any]) -> str:
     if _options(operation):
         return "Exploração de todas as possibilidades"
@@ -495,6 +502,7 @@ def _operation_badge_label(operation: dict[str, Any]) -> str:
         return f"{strategy}"
 
     return "Estratégia não indicada"
+
 
 def _mode_label(operation: dict[str, Any]) -> str:
     if _options(operation):
@@ -2113,8 +2121,7 @@ def _steps_section(
     blocks = [
         (title, lines)
         for title, lines in blocks
-        if "vacuity" not in title.lower()
-        and "vacuidade" not in title.lower()
+        if "vacuity" not in title.lower() and "vacuidade" not in title.lower()
     ]
 
     # Renumerar os passos depois de remover Vacuity.
@@ -2192,7 +2199,6 @@ def _steps_section(
     return story
 
 
-
 # ============================================================
 # SECÇÕES COMPACTAS PARA "TODAS AS POSSIBILIDADES"
 # ============================================================
@@ -2235,6 +2241,7 @@ def _format_result_bases_for_box(
         formatted.append(f"... e mais {hidden} resultado(s) distinto(s)")
     return formatted
 
+
 def _distinct_bases_final_sentence(
     options: Sequence[dict[str, Any]],
 ) -> str:
@@ -2266,6 +2273,7 @@ def _distinct_bases_final_sentence(
         f"Das {total} possibilidade(s) gerada(s), apenas {different} correspondem a bases finais diferentes. "
         f"Essas bases distintas aparecem pela primeira vez nas possibilidades com índices {indices_text}."
     )
+
 
 def _base_group_key(base: Sequence[str]) -> tuple[str, ...]:
     """
@@ -2376,7 +2384,9 @@ def _distinct_result_bases_index_section(
                 Paragraph(_html("..."), styles["small_bold"]),
                 Paragraph(_html(f"Mais {hidden} base(s) distinta(s)"), styles["small"]),
                 Paragraph(
-                    _html("Consulta o detalhe das possibilidades nas páginas seguintes."),
+                    _html(
+                        "Consulta o detalhe das possibilidades nas páginas seguintes."
+                    ),
                     styles["small_muted"],
                 ),
             ]
@@ -2419,8 +2429,9 @@ def _distinct_result_bases_index_section(
 
     return story
 
+
 def _all_options_core_structures(
-    operation: dict[str, Any]
+    operation: dict[str, Any],
 ) -> tuple[str, list[str], str, list[str]]:
     """Seleciona os blocos técnicos que devem aparecer na capa compacta."""
     key = _operator_key(operation)
@@ -2621,9 +2632,14 @@ def _methods_explanation_section(
         )
     )
     story.append(Spacer(1, 0.15 * cm))
-    story.append(_callout("Síntese das partes 1, 2 e 3", synthesis_body, palette, styles, tone="info"))
+    story.append(
+        _callout(
+            "Síntese das partes 1, 2 e 3", synthesis_body, palette, styles, tone="info"
+        )
+    )
     story.append(Spacer(1, 0.20 * cm))
     return story
+
 
 # ============================================================
 # SECÇÕES PARA "VER TODAS AS OPÇÕES"

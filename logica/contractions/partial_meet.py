@@ -167,7 +167,9 @@ def partial_meet_contraction_with_steps(
             steps.append("Assim, o próprio A é um remainder maximal.")
         else:
             steps.append(f"A implica α, isto é, A ⊢ {alpha}.")
-            steps.append("Logo, é necessário procurar subconjuntos maximais que deixem de implicar α.")
+            steps.append(
+                "Logo, é necessário procurar subconjuntos maximais que deixem de implicar α."
+            )
 
         steps.append(f"Desses, {len(nao_implicam)} não implicam α.")
 
@@ -181,7 +183,7 @@ def partial_meet_contraction_with_steps(
     if alpha_e_tautologia:
         selecionados = []
         selecionados_para_resultado = [A]
-        steps.append("Como A⊥α = ∅, aplica-se a convenção γ(∅) = {A}.")
+        steps.append(f"Como A⊥({alpha}) = ∅, aplica-se a convenção γ(∅) = {{A}}.")
         steps.append("Isto representa a escolha trivial que mantém a base inalterada.")
     else:
         selecionados = selecionar_remainders(rems, estrategia=estrategia)
@@ -288,18 +290,17 @@ def partial_meet_contraction_manual_with_steps(
         selecionados_para_resultado = [A]
 
         steps.append("O utilizador confirmou a seleção vazia.")
-        steps.append("Como A⊥α = ∅, aplica-se a convenção γ(∅) = {A}.")
+        steps.append(f"Como A⊥({alpha}) = ∅, aplica-se a convenção γ(∅) = {{A}}.")
         steps.append("Remainders escolhidos pelo utilizador:")
         steps.append(format_set_of_sets_text(selecionados_normalizados))
 
     else:
         if not remainders_selecionados:
-            raise ValueError("Na seleção manual, tens de escolher pelo menos um remainder.")
+            raise ValueError(
+                "Na seleção manual, tens de escolher pelo menos um remainder."
+            )
 
-        rems_normalizados = {
-            frozenset(normalizar_formula(f) for f in r)
-            for r in rems
-        }
+        rems_normalizados = {frozenset(normalizar_formula(f) for f in r) for r in rems}
 
         selecionados_normalizados: List[List[str]] = []
 

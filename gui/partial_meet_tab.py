@@ -122,9 +122,9 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
     font_selected_bold = ctk.CTkFont(family=APP_FONT, size=12, weight="bold")
 
     parent.grid_rowconfigure(0, weight=1)
-    parent.grid_columnconfigure(0, weight=2, minsize=360)
-    parent.grid_columnconfigure(1, weight=2, minsize=405)
-    parent.grid_columnconfigure(2, weight=3, minsize=485)
+    parent.grid_columnconfigure(0, weight=2, minsize=320)
+    parent.grid_columnconfigure(1, weight=2, minsize=350)
+    parent.grid_columnconfigure(2, weight=3, minsize=420)
 
     # ============================================================
     # BASE PARTIAL MEET
@@ -299,13 +299,32 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
     op_header = ctk.CTkFrame(operation_card, fg_color="transparent")
     op_header.grid(row=0, column=0, sticky="ew", padx=16, pady=(12, 8))
     op_header.grid_columnconfigure(0, weight=1)
-    section_title(
-        op_header, "Operação Partial Meet", font_section, color_key="pm"
-    ).grid(row=0, column=0, sticky="w")
-    _pill(
-        op_header, "γ seleção", PM_UI["secondary_dark"], PM_UI["soft_3"], font_small
-    ).grid(row=0, column=1, sticky="e")
 
+    section_title(
+        op_header,
+        "Operação Partial Meet",
+        font_section,
+        color_key="pm",
+    ).grid(
+        row=0,
+        column=0,
+        columnspan=2,
+        sticky="w",
+    )
+
+    _pill(
+        op_header,
+        "γ seleção",
+        PM_UI["secondary_dark"],
+        PM_UI["soft_3"],
+        font_small,
+    ).grid(
+        row=1,
+        column=0,
+        columnspan=2,
+        sticky="e",
+        pady=(4, 0),
+    )
     alpha_panel = ctk.CTkFrame(
         operation_card,
         fg_color=PM_UI["white"],
@@ -408,22 +427,44 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
     )
     result_header.grid(row=0, column=0, sticky="ew", padx=12, pady=(12, 8))
     result_header.grid_columnconfigure(0, weight=1)
+    result_header.grid_columnconfigure(1, weight=0)
 
+    # Título do cabeçalho
     ctk.CTkLabel(
         result_header,
         text="Resultados Partial Meet",
         font=font_section,
         text_color="#ffffff",
         anchor="w",
-    ).grid(row=0, column=0, sticky="w", padx=12, pady=(8, 0))
-    ctk.CTkLabel(
+    ).grid(
+        row=0,
+        column=0,
+        sticky="w",
+        padx=12,
+        pady=(8, 0),
+    )
+
+    # Subtítulo do cabeçalho
+    result_subtitle = ctk.CTkLabel(
         result_header,
         text="contagens, remainders, seleções, remoções e base resultante",
         font=font_small,
         text_color="#ffedd5",
         anchor="w",
-    ).grid(row=1, column=0, sticky="w", padx=12, pady=(0, 8))
+        justify="left",
+        wraplength=390,
+    )
 
+    result_subtitle.grid(
+        row=1,
+        column=0,
+        columnspan=2,
+        sticky="ew",
+        padx=12,
+        pady=(0, 8),
+    )
+
+    # Botão Limpar
     app.pm_btn_clear_log = secondary_button(
         result_header,
         "Limpar",
@@ -431,8 +472,16 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
         font_small,
         variant="pm",
     )
+
     style_soft_button(app.pm_btn_clear_log)
-    app.pm_btn_clear_log.grid(row=0, column=1, rowspan=2, sticky="e", padx=8, pady=8)
+
+    app.pm_btn_clear_log.grid(
+        row=0,
+        column=1,
+        sticky="e",
+        padx=8,
+        pady=8,
+    )
 
     app.text_pm_log = ctk.CTkTextbox(
         result_card,
