@@ -301,7 +301,9 @@ def build_tab_kernel(app, parent: ctk.CTkFrame) -> None:
 
     op_header = ctk.CTkFrame(operation_card, fg_color="transparent")
     op_header.grid(row=0, column=0, sticky="ew", padx=16, pady=(12, 8))
+
     op_header.grid_columnconfigure(0, weight=1)
+    op_header.grid_columnconfigure(1, weight=0)
 
     section_title(
         op_header,
@@ -311,7 +313,6 @@ def build_tab_kernel(app, parent: ctk.CTkFrame) -> None:
     ).grid(
         row=0,
         column=0,
-        columnspan=2,
         sticky="w",
     )
 
@@ -322,11 +323,9 @@ def build_tab_kernel(app, parent: ctk.CTkFrame) -> None:
         KERNEL_UI["soft_3"],
         font_small,
     ).grid(
-        row=1,
-        column=0,
-        columnspan=2,
+        row=0,
+        column=1,
         sticky="e",
-        pady=(4, 0),
     )
 
     alpha_panel = ctk.CTkFrame(

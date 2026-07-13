@@ -291,40 +291,79 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
 
     operation_card = make_card(parent, alt=True)
     operation_card.configure(
-        fg_color=PM_UI["soft_2"], border_color=PM_UI["soft_3"], border_width=1
+        fg_color=PM_UI["soft_2"],
+        border_color=PM_UI["soft_3"],
+        border_width=1,
     )
-    operation_card.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+    operation_card.grid(
+        row=0,
+        column=1,
+        sticky="nsew",
+        padx=10,
+        pady=10,
+    )
     operation_card.grid_columnconfigure(0, weight=1)
 
-    op_header = ctk.CTkFrame(operation_card, fg_color="transparent")
-    op_header.grid(row=0, column=0, sticky="ew", padx=16, pady=(12, 8))
-    op_header.grid_columnconfigure(0, weight=1)
+    # ---------------------------------------------------------
+    # Cabeçalho da operação
+    # ---------------------------------------------------------
 
-    section_title(
+    op_header = ctk.CTkFrame(
+        operation_card,
+        fg_color="transparent",
+    )
+
+    op_header.grid(
+        row=0,
+        column=0,
+        sticky="ew",
+        padx=16,
+        pady=(12, 8),
+    )
+
+    op_header.grid_columnconfigure(
+        0,
+        weight=1,
+        minsize=225,
+    )
+
+    op_header.grid_columnconfigure(
+        1,
+        weight=0,
+    )
+
+    op_title = section_title(
         op_header,
         "Operação Partial Meet",
         font_section,
         color_key="pm",
-    ).grid(
-        row=0,
-        column=0,
-        columnspan=2,
-        sticky="w",
     )
 
-    _pill(
+    op_title.grid(
+        row=0,
+        column=0,
+        sticky="w",
+        padx=(0, 8),
+    )
+
+    selection_pill = _pill(
         op_header,
         "γ seleção",
         PM_UI["secondary_dark"],
         PM_UI["soft_3"],
         font_small,
-    ).grid(
-        row=1,
-        column=0,
-        columnspan=2,
-        sticky="e",
-        pady=(4, 0),
     )
+
+    selection_pill.grid(
+        row=0,
+        column=1,
+        sticky="e",
+    )
+
+    # ---------------------------------------------------------
+    # Painel da fórmula α
+    # ---------------------------------------------------------
+
     alpha_panel = ctk.CTkFrame(
         operation_card,
         fg_color=PM_UI["white"],
@@ -332,12 +371,33 @@ def build_tab_partial_meet(app, parent: ctk.CTkFrame) -> None:
         border_width=1,
         border_color=PM_UI["soft_3"],
     )
-    alpha_panel.grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 10))
-    alpha_panel.grid_columnconfigure(0, weight=1)
 
+    alpha_panel.grid(
+        row=1,
+        column=0,
+        sticky="ew",
+        padx=16,
+        pady=(0, 10),
+    )
+
+    alpha_panel.grid_columnconfigure(
+        0,
+        weight=1,
+    )
+
+    # A partir daqui já podes usar alpha_panel
     _step_label(
-        alpha_panel, "1. Fórmula a contrair α", font_label, PM_UI["accent_dark"]
-    ).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 4))
+        alpha_panel,
+        "1. Fórmula a contrair α",
+        font_label,
+        PM_UI["accent_dark"],
+    ).grid(
+        row=0,
+        column=0,
+        sticky="w",
+        padx=12,
+        pady=(10, 5),
+    )
     app.entry_pm_target = ctk.CTkEntry(
         alpha_panel,
         placeholder_text="Ex: r",
